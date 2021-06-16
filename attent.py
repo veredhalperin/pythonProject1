@@ -28,8 +28,6 @@ class attent(torch.nn.Module):
         self.W3 = torch.nn.Linear(95, 84)
         """
 
-        
-
     def forward(self, features,col,
                 unb,
                 unb_unb,
@@ -115,6 +113,7 @@ class attent(torch.nn.Module):
                 sig_sig_uni,
                 sig_sig_pes,
                 sig_sig_sig):
+
         x = torch.nn.functional.relu(self.W1(features))
         x = self.DropOut(x)
         x = torch.nn.functional.relu(self.W2(x))

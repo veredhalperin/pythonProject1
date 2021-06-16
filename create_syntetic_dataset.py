@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from CPC18PsychForestPython.CPC15_BEASTpred import CPC15_BEASTpred
 from sklearn.metrics import mean_squared_error
-from CPC18PsychForestPython.get_PF_Features import lot_shape_convert
+from CPC18PsychForestPython.get_PF_Features import lot_shape_convert,get_PF_Features
 from datetime import datetime
 import torch
 from torch import distributions
@@ -19,8 +19,8 @@ def create_syntetic_dataset(Data,p=None,s=None,is_sample=False,is_probs=False,or
     Data.index=range(nProblems)
     df = pd.DataFrame()
     for prob in range(0, nProblems, 5):
-        if prob > 0:
-            print(prob / 5, datetime.now() - start)
+        #if prob > 0:
+        #    print(prob / 5, datetime.now() - start)
         start = datetime.now()
         # read problem's parameters
         Ha = Data['Ha'][prob]
@@ -37,6 +37,8 @@ def create_syntetic_dataset(Data,p=None,s=None,is_sample=False,is_probs=False,or
         LotNumB = int(Data['LotNumB'][prob])
         Amb = Data['Amb'][prob]
         Corr = Data['Corr'][prob]
+        Feates=get_PF_Features
+        """
         if is_probs:
             p1=np.array(Data[['Punb','Puni','Ppes','Psig']].values[prob])
             p2 = np.array(Data[['Punb', 'Puni', 'Ppes', 'Psig']].values[prob+1])
@@ -87,6 +89,7 @@ def create_syntetic_dataset(Data,p=None,s=None,is_sample=False,is_probs=False,or
 
         Feats['GameID'] = [Data['GameID'][prob + i] for i in range(5)]
         Feats['B_rate'] = [Data['B_rate'][prob + i] for i in range(5)]
+        """
         df = df.append(Feats)
     return df
 
@@ -97,10 +100,20 @@ if __name__ == '__main__':
     df=pd.read_csv('test_probs.csv')
     #test = create_syntetic_dataset(df, is_probs=True,original=False)
     #print("original", mean_squared_error(test['B_rate'], test['BEASTpred']))
-    avg=0
-    for i in range(5):
-        test = create_syntetic_dataset(df[df['GameID']], is_probs=True,original=False)
-        MSE=mean_squared_error(test['B_rate'], test['BEASTpred'])
-        print(i, MSE)
-        avg+=MSE
-    print("avg",avg/10)
+    num=5
+    for original in [False,True]:
+        avg=0
+        for i in range(num):
+            IDs=np.random.choice(range(211,271),size=60)
+            tmp=df[df['GameID']==IDs[0]].sort_values(by='block')
+            for j in range(1,len(IDs)):
+                tmp=tmp.append(df[df['GameID']==IDs[j]].sort_values(by='block'))
+            test = create_syntetic_dataset(tmp, is_probs=True,original=original)
+            if original:
+                test.to_csv('original_'+str(i)+'.csv',index=False)
+            else:
+                test.to_csv('not_original_' + str(i) + '.csv', index=False)
+            MSE=mean_squared_error(test['B_rate'], test['BEASTpred'])
+            print(original,i, MSE)
+            avg+=MSE
+        print("avg",avg/num)

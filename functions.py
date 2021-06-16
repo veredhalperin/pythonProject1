@@ -1,5 +1,4 @@
 from scipy.optimize import minimize
-from sklearn.metrics import mean_squared_error
 from datetime import datetime
 import logging
 logging.basicConfig(filename='out.log', level=logging.DEBUG)
@@ -10,19 +9,28 @@ import numpy as np
 from CPC18PsychForestPython.CPC15_isStochasticDom import CPC15_isStochasticDom
 from CPC18PsychForestPython.get_pBetter import get_pBetter
 import pandas as pd
-from create_syntetic_dataset import create_syntetic_dataset
+from sklearn.metrics import  mean_squared_error
+
 def lot_shape_convert(lot_shape):
     return {
         '-': [1, 0, 0, 0],
         'Symm': [0, 1, 0, 0],
         'L-skew': [0, 0, 1, 0],
         'R-skew': [0, 0, 0, 1],
-    }
+    }[lot_shape]
+
+def lot_shape_convert2(lot_shape):
+    if (lot_shape == [1, 0, 0, 0]).all(): return '-'
+    if (lot_shape == [0, 1, 0, 0]).all(): return 'Symm'
+    if (lot_shape == [0, 0, 1, 0]).all(): return 'L-skew'
+    if (lot_shape == [0, 0, 0, 1]).all(): return 'R-skew'
+
 def getSD(vals, probs):
     m = np.matrix.dot(vals, probs.T)
     sqds = np.power((vals - m), 2)
     var = np.matrix.dot(probs, sqds.T)
     return math.sqrt(var)
+
 def get_PF_Features(Ha, pHa, La, LotShapeA, LotNumA, Hb, pHb, Lb, LotShapeB, LotNumB, Amb, Corr):
     # Finds the values of the engineered features that are part of Psychological Forest
     # Gets as input the parameters defining the choice problem in CPC18 and returns
@@ -118,22 +126,30 @@ def get_PF_Features(Ha, pHa, La, LotShapeA, LotNumA, Hb, pHb, Lb, LotShapeB, Lot
     pBbet_UnbiasedFB = probsBetter[1] - probsBetter[0]
     pBbet_SignFB = probsBetterSign[1] - probsBetterSign[0]
 
+    # convert lot shape: '-'/'Symm'/'L-skew'/'R-skew' to 4 different features for the RF model
+    lot_shape_listA = lot_shape_convert(LotShapeA)
+    lot_shape_listB = lot_shape_convert(LotShapeB)
+
     # create features data frame
-    feats_labels = ('diffEV', 'diffSDs', 'diffMins', 'diffMaxs', 'diffUV', 'RatioMin', 'SignMax',
+    feats_labels = ('Ha', 'pHa', 'La', 'lot_shape__A', 'lot_shape_symm_A', 'lot_shape_L_A', 'lot_shape_R_A', 'LotNumA',
+                    'Hb', 'pHb', 'Lb', 'lot_shape__B', 'lot_shape_symm_B', 'lot_shape_L_B', 'lot_shape_R_B', 'LotNumB',
+                    'Amb', 'Corr', 'diffEV', 'diffSDs', 'diffMins', 'diffMaxs', 'diffUV', 'RatioMin', 'SignMax',
                     'pBbet_Unbiased1', 'pBbet_UnbiasedFB', 'pBbet_Uniform', 'pBbet_Sign1', 'pBbet_SignFB', 'Dom',
                     'diffBEV0', 'diffBEVfb', 'diffSignEV')
-    data_lists = [[diffEV, diffSDs, diffMins, diffMaxs, diffUV, RatioMin,
-                   SignMax, pBbet_Unbiased1,pBbet_UnbiasedFB, pBbet_Uniform,
-                   pBbet_Sign1, pBbet_SignFB, Dom, diffBEV0,diffBEVfb, diffSignEV]]
+    data_lists = [[Ha, pHa, La], lot_shape_listA, [LotNumA, Hb, pHb, Lb], lot_shape_listB, [LotNumB, Amb, Corr,
+                             diffEV, diffSDs, diffMins, diffMaxs, diffUV, RatioMin, SignMax, pBbet_Unbiased1,
+                             pBbet_UnbiasedFB, pBbet_Uniform, pBbet_Sign1, pBbet_SignFB, Dom, diffBEV0,
+                             diffBEVfb, diffSignEV]]
     features_data = [item for sublist in data_lists for item in sublist]
     tmpFeats = pd.DataFrame(features_data, index=feats_labels).T
 
     return tmpFeats
-def Button(Button):
-    if Button=='R':
-        return 'L'
+
+def R(R):
+    if R==1:
+        return 0
     else:
-        return 'R'
+        return 1
 def Outcomes(lot_shape,pH):
     if lot_shape=='_':
         if pH==1:
@@ -142,7 +158,7 @@ def Outcomes(lot_shape,pH):
             return 2
     else:
         return 3
-def to_one_hot(value,category):
+def one_hot(value,category):
     if value==category:
         return 1
     else:
@@ -157,207 +173,6 @@ def value_trial(sequence,i):
 def append(array,val):
     array.append(val)
     return array
-def feature_extration():
-    df=pd.read_csv('All_estimation_raw_data.csv')
-    df=df.drop(columns=['Set','Condition','RT','Feedback','block','Payoff','Forgone'])
-    #adds opposite games for non amb games
-    non_amb=df[df['Amb']==0]
-    opposite=non_amb[['SubjID','Location','Gender','Age','Amb','Corr','Order','Trial']]
-    opposite['GameID']=non_amb['GameID']+210
-    opposite['Ha']=non_amb['Hb']
-    opposite['pHa']=non_amb['pHb']
-    opposite['La']=non_amb['Lb']
-    opposite['LotShapeA']=non_amb['LotShapeB']
-    opposite['LotNumA']=non_amb['LotNumB']
-    opposite['Hb']=non_amb['Ha']
-    opposite['pHb']=non_amb['pHa']
-    opposite['Lb']=non_amb['La']
-    opposite['LotShapeB']=non_amb['LotShapeA']
-    opposite['LotNumB']=non_amb['LotNumA']
-    opposite['Button']=non_amb.apply(lambda x: Button(x['Button']),axis=1)
-    opposite['B']=1-non_amb['B']
-    opposite['Apay']=non_amb['Bpay']
-    opposite['Bpay']=non_amb['Apay']
-    df=df.append(opposite)
-    #adds category of num of outcomes
-    df['a']=df.apply(lambda x: Outcomes(x['LotShapeA'],x['pHa']),axis=1)
-    df['b']=df.apply(lambda x: Outcomes(x['LotShapeB'],x['pHb']),axis=1)
-    #adds luck level per game,trial,and participent comnination
-    Data=df[['GameID','Ha','pHa','La','LotShapeA','LotNumA','Hb','pHb','Lb','LotShapeB','LotNumB','Amb','Corr','Apay','Bpay']].drop_duplicates()
-    nProblems = Data.shape[0]
-    Data.index=range(nProblems)
-    luck_levels_A=[]
-    luck_levels_B=[]
-    for prob in range(nProblems):
-        Ha = Data['Ha'][prob]
-        pHa = Data['pHa'][prob]
-        La = Data['La'][prob]
-        LotShapeA = Data['LotShapeA'][prob]
-        LotNumA = Data['LotNumA'][prob]
-        Hb = Data['Hb'][prob]
-        pHb = Data['pHb'][prob]
-        Lb = Data['Lb'][prob]
-        LotShapeB = Data['LotShapeB'][prob]
-        LotNumB = Data['LotNumB'][prob]
-        Amb = Data['Amb'][prob]
-        Corr = Data['Corr'][prob]
-        Apay=Data['Apay'][prob]
-        Bpay=Data['Bpay'][prob]
-        luck_levels_A.append(luck_level(Ha,pHa,La,LotShapeA,LotNumA,Apay))
-        luck_levels_B.append(luck_level(Hb,pHb,Lb,LotShapeB,LotNumB,Bpay))
-    Data['luck_level_A']=luck_levels_A
-    Data['luck_level_B']=luck_levels_B
-    df=df.merge(Data[['GameID','luck_level_A','luck_level_B','Apay','Bpay']],on=['GameID','Apay','Bpay'])
-    #adds biases choises per game and trial
-    unbiased,uniform,pessimism,sign,GameID,Trial=[],[],[],[],[],[]
-    Data=df[['GameID','Ha','pHa','La','LotShapeA','LotNumA','Hb','pHb','Lb','LotShapeB','LotNumB','Amb','Corr']].drop_duplicates()
-    nProblems = Data.shape[0]
-    Data.index=range(nProblems)
-    for prob in range(nProblems):
-        Ha = Data['Ha'][prob]
-        pHa = Data['pHa'][prob]
-        La = Data['La'][prob]
-        LotShapeA = Data['LotShapeA'][prob]
-        LotNumA = Data['LotNumA'][prob]
-        Hb = Data['Hb'][prob]
-        pHb = Data['pHb'][prob]
-        Lb = Data['Lb'][prob]
-        LotShapeB = Data['LotShapeB'][prob]
-        LotNumB = Data['LotNumB'][prob]
-        Amb = Data['Amb'][prob]
-        Corr = Data['Corr'][prob]
-        simPred_unbiased,simPred_uniform,simPred_pessimism,simPred_sign=CPC15_BEASTsimulation(Ha, pHa, La, LotShapeA, LotNumA, Hb, pHb, Lb, LotShapeB, LotNumB, Amb, Corr)
-        unbiased.append(simPred_unbiased)
-        uniform.append(simPred_uniform)
-        pessimism.append(simPred_pessimism)
-        sign.append(simPred_sign)
-        GameID.append([Data['GameID'][prob] for i in range(25)])
-        Trial.append([i+1 for i in range(25)])
-    unbiased_list=[]
-    uniform_list=[]
-    pessimism_list=[]
-    sign_list=[]
-    GameID_list=[]
-    Trial_list=[]
-    unbiased_list=[]
-    uniform_list=[]
-    pessimism_list=[]
-    sign_list=[]
-    GameID_list=[]
-    Trial_list=[]
-    for i in range(len(unbiased)):
-        for j in range(25):
-            unbiased_list.append(unbiased[i][j][0])
-            uniform_list.append(uniform[i][j][0])
-            pessimism_list.append(pessimism[i][j][0])
-            sign_list.append(sign[i][j][0])
-            GameID_list.append(GameID[i][j])
-            Trial_list.append(Trial[i][j])
-    tmp=pd.DataFrame.from_dict({'Unbiased':unbiased_list,'Uniform':uniform_list,'Pessimism':pessimism_list,'Sign':sign_list,'GameID':GameID_list,'Trial':Trial_list})
-    grouped=tmp.groupby(['GameID']).agg({'Sign':lambda x:list(x),'Unbiased':lambda x:list(x),'Uniform':lambda x:list(x),'Pessimism':lambda x:list(x)})
-    for i  in range(25):
-        for column in ['Unbiased','Uniform','Pessimism','Sign']:
-            grouped[column+'_'+str(i+1)]=grouped.apply(lambda x: value_trial(x[column],i),axis=1)
-    for column in ['Unbiased','Uniform','Pessimism','Sign']:
-        grouped[column+'_Mean']=grouped[column].apply(lambda x: np.mean(np.array(x)))
-        grouped[column+'_Var']=grouped[column].apply(lambda x: np.var(np.array(x)))
-    grouped=grouped.drop(columns=['Unbiased','Uniform','Pessimism','Sign'])
-    df=grouped.merge(df,on=['GameID'])
-    #adds psychological features
-    df2=df[df['GameID']<211].merge(pd.read_csv('RealData270.csv')[['GameID','diffEV', 'diffSDs', 'diffMins', 'diffMaxs', 'diffUV', 'RatioMin', 'SignMax','pBbet_Unbiased1', 'pBbet_UnbiasedFB', 'pBbet_Uniform', 'pBbet_Sign1', 'pBbet_SignFB', 'Dom','diffBEV0', 'diffBEVfb', 'diffSignEV']],on='GameID').sort_values(by=['SubjID', 'Order','GameID','Trial'])
-    Data=df[df['GameID']>210][['GameID','Ha','pHa','La','LotShapeA','LotNumA','Hb','pHb','Lb','LotShapeB','LotNumB','Amb','Corr']].drop_duplicates()
-    nProblems = Data.shape[0]
-    Data.index=range(nProblems)
-    for prob in range(nProblems):
-        Ha = Data['Ha'][prob]
-        pHa = Data['pHa'][prob]
-        La = Data['La'][prob]
-        LotShapeA = Data['LotShapeA'][prob]
-        LotNumA = Data['LotNumA'][prob]
-        Hb = Data['Hb'][prob]
-        pHb = Data['pHb'][prob]
-        Lb = Data['Lb'][prob]
-        LotShapeB = Data['LotShapeB'][prob]
-        LotNumB = Data['LotNumB'][prob]
-        Amb = Data['Amb'][prob]
-        Corr = Data['Corr'][prob]
-        Feats=get_PF_Features(Ha, pHa, La, LotShapeA, LotNumA, Hb, pHb, Lb, LotShapeB, LotNumB, Amb, Corr)
-        Feats['GameID']=Data['GameID'][prob]
-        if prob==0:
-            df3=Feats
-        else:
-            df3=df3.append(Feats)
-    df3=df.merge(df3,on='GameID')
-    df=df2.append(df3)
-    #change from catgorial to one-hot
-    df['lot_shape__A']=df.apply(lambda x: to_one_hot(x['LotShapeA'],'-'),axis=1)
-    df['lot_shape_symm_A']=df.apply(lambda x: to_one_hot(x['LotShapeA'],'Symm'),axis=1)
-    df['lot_shape_R_A']=df.apply(lambda x: to_one_hot(x['LotShapeA'],'R-skew'),axis=1)
-    df['lot_shape_L_A']=df.apply(lambda x: to_one_hot(x['LotShapeA'],'L-skew'),axis=1)
-    df['lot_shape__B']=df.apply(lambda x: to_one_hot(x['LotShapeB'],'-'),axis=1)
-    df['lot_shape_symm_B']=df.apply(lambda x: to_one_hot(x['LotShapeB'],'Symm'),axis=1)
-    df['lot_shape_R_B']=df.apply(lambda x: to_one_hot(x['LotShapeB'],'R-skew'),axis=1)
-    df['lot_shape_L_B']=df.apply(lambda x: to_one_hot(x['LotShapeB'],'L-skew'),axis=1)
-    df['R']=df.apply(lambda x: to_one_hot(x['Button'],'R'),axis=1)
-    df['Technion']=df.apply(lambda x: to_one_hot(x['Location'],'Technion'),axis=1)
-    df['M']=df.apply(lambda x: to_one_hot(x['Gender'],'M'),axis=1)
-    df=df.drop(columns=['Button','Location','LotShapeA','LotShapeB','Gender'])
-    #adds weather B is good
-    df['Good']=df.apply(lambda x: is_good(x['Bpay'],x['Apay']),axis=1)
-    final=df[df['Trial']<6].drop(columns=['luck_level_A','luck_level_B'])
-    for i in range(-50,257):
-        for val in ['Apay','Bpay']:
-            df[val+'_'+str(i)]=0
-    for trial2 in range(6,26):
-        df['Good_'+str(trial2)]=0.5
-    """
-    old=pd.read_csv('22.csv')
-    for col in ['Apay_List','Bpay_List','luck_level_A_List','luck_level_B_List']:
-        old[col]=old.apply(lambda x: [float(x) for x in x[col][1:len(x[col])-1].split(', ')],axis=1)
-    """
-    for trial in range(6,26):
-        print(trial)
-        relevant=df[df['Trial']==trial]
-        length=len(relevant)
-        relevant.index=range(length)
-        for val in ['Apay','Bpay']:
-            pays=relevant[val]
-            for value in range(-50,257):
-                if trial==6:
-                    tmp=np.zeros(length)
-                else:
-                    tmp=old[val+'_'+str(value)].values
-                for i in range(length):
-                    if value==pays[i]:
-                        tmp[i]+=1
-                relevant[val+'_'+str(value)]=tmp
-            if trial==6:
-                relevant[val+'_List']=relevant.apply(lambda x: [x[val]],axis=1)
-            else:
-                relevant[val+'_List']=old[val+'_List']
-                relevant[val+'_List']=relevant.apply(lambda x: append(x[val+'_List'],x[val]),axis=1)
-            relevant[val+'_Mean']=relevant.apply(lambda x: np.mean(x[val+'_List']),axis=1)
-            relevant[val+'_Var']=relevant.apply(lambda x: np.var(x[val+'_List']),axis=1)
-        for val in ['luck_level_A','luck_level_B']:
-            if trial==6:
-                relevant[val+'_List']=relevant.apply(lambda x: [x[val]],axis=1)
-            else:
-                relevant[val+'_List']=old[val+'_List']
-                relevant[val+'_List']=relevant.apply(lambda x: append(x[val+'_List'],x[val]),axis=1)
-            relevant['luck_level_Mean']=relevant.apply(lambda x: np.mean(x[val+'_List']),axis=1)
-        for trial2 in range(6,trial+1):
-                if trial==trial2:
-                    relevant['Good_'+str(trial2)]=relevant['Good']
-                else:
-                    relevant['Good_'+str(trial2)]=old['Good']
-        old=relevant
-        old.to_csv(str(trial)+'.csv',index=False)
-        relevant=relevant.drop(columns=['luck_level_A','luck_level_B','luck_level_A_List','luck_level_B_List','Apay_List','Bpay_List'])
-        final=final.append(relevant)
-    final=final.sort_values(by=['SubjID', 'Order','GameID','Trial']).drop_duplicates()
-    final.to_csv('final.csv',index=False)
-
-
 
 def luck_level(H, pH, L, LotShape, LotNum, payoff):
     Dist = CPC18_getDist(H, pH, L, LotShape, LotNum)
@@ -384,7 +199,7 @@ def luck_level(H, pH, L, LotShape, LotNum, payoff):
             sampled_int += 1
     return cum_prob
 
-def CPC15_BEASTsimulation(Ha, pHa, La, LotShapeA, LotNumA, Hb, pHb, Lb, LotShapeB, LotNumB, Amb, Corr):
+def CPC15_BEASTsimulation_biased(Ha, pHa, La, LotShapeA, LotNumA, Hb, pHb, Lb, LotShapeB, LotNumB, Amb, Corr):
     DistA = CPC18_getDist(Ha, pHa, La, LotShapeA, LotNumA)
     DistB = CPC18_getDist(Hb, pHb, Lb, LotShapeB, LotNumB)
     # Simulation of the BEAST model.
@@ -561,6 +376,304 @@ def CPC15_BEASTsimulation(Ha, pHa, La, LotShapeA, LotNumA, Hb, pHb, Lb, LotShape
 
     return Decision_unbiased,Decision_uniform,Decision_pessimism,Decision_sign
 
+def add_opposite_games(df,is_individuals,baseline=None,per_game_and_player=False):
+    non_amb = df[df['Amb'] == 0]
+    if is_individuals:
+        opposite = non_amb[['SubjID', 'Technion', 'M', 'Age', 'Amb', 'Corr', 'Order', 'Trial']]
+    elif per_game_and_player:
+        opposite = non_amb[['SubjID', 'Technion', 'M', 'Age', 'Amb', 'Corr', 'Order']]
+    else:
+        opposite = non_amb[['Amb', 'Corr',]]
+    opposite['GameID'] = non_amb['GameID'] + 270
+    opposite['Ha'] = non_amb['Hb']
+    opposite['pHa'] = non_amb['pHb']
+    opposite['La'] = non_amb['Lb']
+    for shape in ['lot_shape__', 'lot_shape_symm_', 'lot_shape_L_', 'lot_shape_R_']:
+        opposite[shape+'A']=non_amb[shape+'B']
+    opposite['LotNumA'] = non_amb['LotNumB']
+    opposite['Hb'] = non_amb['Ha']
+    opposite['pHb'] = non_amb['pHa']
+    opposite['Lb'] = non_amb['La']
+    for shape in ['lot_shape__', 'lot_shape_symm_', 'lot_shape_L_', 'lot_shape_R_']:
+        opposite[shape + 'B'] = non_amb[shape + 'A']
+    opposite['LotNumB'] = non_amb['LotNumA']
+    if is_individuals:
+        opposite['R'] = non_amb.apply(lambda x: R(x['R']), axis=1)
+        opposite['B'] = 1 - non_amb['B']
+        opposite['Apay'] = non_amb['Bpay']
+        opposite['Bpay'] = non_amb['Apay']
+    else:
+        for i in range(1,6):
+            opposite['B.'+str(i)]=1-non_amb['B.'+str(i)]
+            opposite[baseline +'.'+ str(i)] = 1 - non_amb[baseline +'.'+str(i)]
+            if per_game_and_player:
+                opposite['Apay' +'.'+ str(i)] = 1 - non_amb['Bpay' +'.'+ str(i)]
+                opposite['Bpay' +'.'+ str(i)] = 1 - non_amb['Apay'+'.'+ str(i)]
+    return opposite
+
+def add_psychological_features(Data,is_individuals=True,baseline=None,per_game_and_player=False):
+    nProblems = Data.shape[0]
+    Data.index = range(nProblems)
+    for prob in range(nProblems):
+        Ha = Data['Ha'][prob]
+        pHa = Data['pHa'][prob]
+        La = Data['La'][prob]
+        LotShapeA = lot_shape_convert2(Data[['lot_shape__A', 'lot_shape_symm_A', 'lot_shape_L_A', 'lot_shape_R_A']].values[prob])
+        LotNumA = Data['LotNumA'][prob]
+        Hb = Data['Hb'][prob]
+        pHb = Data['pHb'][prob]
+        Lb = Data['Lb'][prob]
+        LotShapeB = lot_shape_convert2(Data[['lot_shape__B', 'lot_shape_symm_B', 'lot_shape_L_B', 'lot_shape_R_B']].values[prob])
+        LotNumB = Data['LotNumB'][prob]
+        Amb = Data['Amb'][prob]
+        Corr = Data['Corr'][prob]
+        Feats = get_PF_Features(Ha, pHa, La, LotShapeA, LotNumA, Hb, pHb, Lb, LotShapeB, LotNumB, Amb, Corr)
+        Feats['GameID'] = Data['GameID'][prob]
+        if is_individuals:
+            Feats['B']=Data['B'][prob]
+        else:
+            for i in range(1,6):
+                Feats['B.' + str(i)] = 1 - Data['B.' + str(i)][prob]
+                Feats[baseline + '.' + str(i)] = 1 - Data[baseline + '.' + str(i)][prob]
+                if per_game_and_player:
+                    Feats['Apay' + '.' + str(i)] = 1 - Data['Bpay' + '.' + str(i)][prob]
+                    Feats['Bpay' + '.' + str(i)] = 1 - Data['Apay' + '.' + str(i)][prob]
+        if prob == 0:
+            df3 = Feats
+        else:
+            df3 = df3.append(Feats)
+    return df3
+
+def change_to_one_hot(df):
+    df['lot_shape__A'] = df.apply(lambda x: one_hot(x['LotShapeA'], '-'), axis=1)
+    df['lot_shape_symm_A'] = df.apply(lambda x: one_hot(x['LotShapeA'], 'Symm'), axis=1)
+    df['lot_shape_R_A'] = df.apply(lambda x: one_hot(x['LotShapeA'], 'R-skew'), axis=1)
+    df['lot_shape_L_A'] = df.apply(lambda x: one_hot(x['LotShapeA'], 'L-skew'), axis=1)
+    df['lot_shape__B'] = df.apply(lambda x: one_hot(x['LotShapeB'], '-'), axis=1)
+    df['lot_shape_symm_B'] = df.apply(lambda x: one_hot(x['LotShapeB'], 'Symm'), axis=1)
+    df['lot_shape_R_B'] = df.apply(lambda x: one_hot(x['LotShapeB'], 'R-skew'), axis=1)
+    df['lot_shape_L_B'] = df.apply(lambda x: one_hot(x['LotShapeB'], 'L-skew'), axis=1)
+    df['R'] = df.apply(lambda x: one_hot(x['Button'], 'R'), axis=1)
+    df['Technion'] = df.apply(lambda x: one_hot(x['Location'], 'Technion'), axis=1)
+    df['M'] = df.apply(lambda x: one_hot(x['Gender'], 'M'), axis=1)
+    return df.drop(columns=['Button', 'Location', 'LotShapeA', 'LotShapeB', 'Gender'])
+
+def feature_extration_individuals():
+    df=pd.read_csv('All_estimation_raw_data.csv')
+    df=df.drop(columns=['Set','Condition','RT','Feedback','block','Payoff','Forgone'])
+    #change from catgorial to one-hot
+    df=change_to_one_hot(df)
+    #adds opposite games for non amb games
+    df = df.append(add_opposite_games(df,is_individuals=True))
+    #adds category of num of outcomes
+    df['a']=df.apply(lambda x: Outcomes(x['LotShapeA'],x['pHa']),axis=1)
+    df['b']=df.apply(lambda x: Outcomes(x['LotShapeB'],x['pHb']),axis=1)
+    #adds luck level per game,trial,and participent comnination
+    Data=df[['GameID','Ha','pHa','La','LotShapeA','LotNumA','Hb','pHb','Lb','LotShapeB','LotNumB','Amb','Corr','Apay','Bpay']].drop_duplicates()
+    nProblems = Data.shape[0]
+    Data.index=range(nProblems)
+    luck_levels_A=[]
+    luck_levels_B=[]
+    for prob in range(nProblems):
+        Ha = Data['Ha'][prob]
+        pHa = Data['pHa'][prob]
+        La = Data['La'][prob]
+        LotShapeA = lot_shape_convert2(
+            Data[['lot_shape__A', 'lot_shape_symm_A', 'lot_shape_L_A', 'lot_shape_R_A']].values[prob])
+        LotNumA = Data['LotNumA'][prob]
+        Hb = Data['Hb'][prob]
+        pHb = Data['pHb'][prob]
+        Lb = Data['Lb'][prob]
+        LotShapeB = lot_shape_convert2(
+            Data[['lot_shape__B', 'lot_shape_symm_B', 'lot_shape_L_B', 'lot_shape_R_B']].values[prob])
+        LotNumB = Data['LotNumB'][prob]
+        Amb = Data['Amb'][prob]
+        Corr = Data['Corr'][prob]
+        Apay=Data['Apay'][prob]
+        Bpay=Data['Bpay'][prob]
+        luck_levels_A.append(luck_level(Ha,pHa,La,LotShapeA,LotNumA,Apay))
+        luck_levels_B.append(luck_level(Hb,pHb,Lb,LotShapeB,LotNumB,Bpay))
+    Data['luck_level_A']=luck_levels_A
+    Data['luck_level_B']=luck_levels_B
+    df=df.merge(Data[['GameID','luck_level_A','luck_level_B','Apay','Bpay']],on=['GameID','Apay','Bpay'])
+    #adds biases choises per game and trial
+    unbiased,uniform,pessimism,sign,GameID,Trial=[],[],[],[],[],[]
+    Data=df[['GameID','Ha','pHa','La','LotShapeA','LotNumA','Hb','pHb','Lb','LotShapeB','LotNumB','Amb','Corr']].drop_duplicates()
+    nProblems = Data.shape[0]
+    Data.index=range(nProblems)
+    for prob in range(nProblems):
+        Ha = Data['Ha'][prob]
+        pHa = Data['pHa'][prob]
+        La = Data['La'][prob]
+        LotShapeA = lot_shape_convert2(
+            Data[['lot_shape__A', 'lot_shape_symm_A', 'lot_shape_L_A', 'lot_shape_R_A']].values[prob])
+        LotNumA = Data['LotNumA'][prob]
+        Hb = Data['Hb'][prob]
+        pHb = Data['pHb'][prob]
+        Lb = Data['Lb'][prob]
+        LotShapeB = lot_shape_convert2(
+            Data[['lot_shape__B', 'lot_shape_symm_B', 'lot_shape_L_B', 'lot_shape_R_B']].values[prob])
+        LotNumB = Data['LotNumB'][prob]
+        Amb = Data['Amb'][prob]
+        Corr = Data['Corr'][prob]
+        simPred_unbiased,simPred_uniform,simPred_pessimism,simPred_sign=CPC15_BEASTsimulation_biased(Ha, pHa, La, LotShapeA, LotNumA, Hb, pHb, Lb, LotShapeB, LotNumB, Amb, Corr)
+        unbiased.append(simPred_unbiased)
+        uniform.append(simPred_uniform)
+        pessimism.append(simPred_pessimism)
+        sign.append(simPred_sign)
+        GameID.append([Data['GameID'][prob] for i in range(25)])
+        Trial.append([i+1 for i in range(25)])
+    unbiased_list=[]
+    uniform_list=[]
+    pessimism_list=[]
+    sign_list=[]
+    GameID_list=[]
+    Trial_list=[]
+    for i in range(len(unbiased)):
+        for j in range(25):
+            unbiased_list.append(unbiased[i][j][0])
+            uniform_list.append(uniform[i][j][0])
+            pessimism_list.append(pessimism[i][j][0])
+            sign_list.append(sign[i][j][0])
+            GameID_list.append(GameID[i][j])
+            Trial_list.append(Trial[i][j])
+    tmp=pd.DataFrame.from_dict({'Unbiased':unbiased_list,'Uniform':uniform_list,'Pessimism':pessimism_list,'Sign':sign_list,'GameID':GameID_list,'Trial':Trial_list})
+    grouped=tmp.groupby(['GameID']).agg({'Sign':lambda x:list(x),'Unbiased':lambda x:list(x),'Uniform':lambda x:list(x),'Pessimism':lambda x:list(x)})
+    for i  in range(25):
+        for column in ['Unbiased','Uniform','Pessimism','Sign']:
+            grouped[column+'_'+str(i+1)]=grouped.apply(lambda x: value_trial(x[column],i),axis=1)
+    for column in ['Unbiased','Uniform','Pessimism','Sign']:
+        grouped[column+'_Mean']=grouped[column].apply(lambda x: np.mean(np.array(x)))
+        grouped[column+'_Var']=grouped[column].apply(lambda x: np.var(np.array(x)))
+    grouped=grouped.drop(columns=['Unbiased','Uniform','Pessimism','Sign'])
+    df=grouped.merge(df,on=['GameID'])
+    #adds psychological features
+    df2 = df[df['GameID'] < 211].merge(pd.read_csv('RealData270.csv')[
+                                           ['GameID', 'diffEV', 'diffSDs', 'diffMins', 'diffMaxs', 'diffUV', 'RatioMin',
+                                            'SignMax', 'pBbet_Unbiased1', 'pBbet_UnbiasedFB', 'pBbet_Uniform',
+                                            'pBbet_Sign1', 'pBbet_SignFB', 'Dom', 'diffBEV0', 'diffBEVfb',
+                                            'diffSignEV']], on='GameID').sort_values(
+        by=['SubjID', 'Order', 'GameID', 'Trial'])
+    df = df2.append(add_psychological_features(df[df['GameID'] > 210][['GameID', 'Ha', 'pHa', 'La', 'lot_shape__A','lot_shape_symm_A','lot_shape_R_A','lot_shape_L_A', 'LotNumA', 'Hb', 'pHb', 'Lb',  'lot_shape__B','lot_shape_symm_B','lot_shape_R_B','lot_shape_L_B',  'LotNumB', 'Amb','Corr']].drop_duplicates()))
+    #adds weather B is good
+    df['Good']=df.apply(lambda x: is_good(x['Bpay'],x['Apay']),axis=1)
+    final=df[df['Trial']<6].drop(columns=['luck_level_A','luck_level_B'])
+    for i in range(-50,257):
+        for val in ['Apay','Bpay']:
+            df[val+'_'+str(i)]=0
+    for trial2 in range(6,26):
+        df['Good_'+str(trial2)]=0.5
+    for trial in range(6,26):
+        print(trial)
+        relevant=df[df['Trial']==trial]
+        length=len(relevant)
+        relevant.index=range(length)
+        for val in ['Apay','Bpay']:
+            pays=relevant[val]
+            for value in range(-50,257):
+                if trial==6:
+                    tmp=np.zeros(length)
+                else:
+                    tmp=old[val+'_'+str(value)].values
+                for i in range(length):
+                    if value==pays[i]:
+                        tmp[i]+=1
+                relevant[val+'_'+str(value)]=tmp
+            if trial==6:
+                relevant[val+'_List']=relevant.apply(lambda x: [x[val]],axis=1)
+            else:
+                relevant[val+'_List']=old[val+'_List']
+                relevant[val+'_List']=relevant.apply(lambda x: append(x[val+'_List'],x[val]),axis=1)
+            relevant[val+'_Mean']=relevant.apply(lambda x: np.mean(x[val+'_List']),axis=1)
+            relevant[val+'_Var']=relevant.apply(lambda x: np.var(x[val+'_List']),axis=1)
+        for val in ['luck_level_A','luck_level_B']:
+            if trial==6:
+                relevant[val+'_List']=relevant.apply(lambda x: [x[val]],axis=1)
+            else:
+                relevant[val+'_List']=old[val+'_List']
+                relevant[val+'_List']=relevant.apply(lambda x: append(x[val+'_List'],x[val]),axis=1)
+            relevant['luck_level_Mean']=relevant.apply(lambda x: np.mean(x[val+'_List']),axis=1)
+        for trial2 in range(6,trial+1):
+                if trial==trial2:
+                    relevant['Good_'+str(trial2)]=relevant['Good']
+                else:
+                    relevant['Good_'+str(trial2)]=old['Good']
+        old=relevant
+        old.to_csv(str(trial)+'.csv',index=False)
+        relevant=relevant.drop(columns=['luck_level_A','luck_level_B','luck_level_A_List','luck_level_B_List','Apay_List','Bpay_List'])
+        final=final.append(relevant)
+    final=final.sort_values(by=['SubjID', 'Order','GameID','Trial']).drop_duplicates()
+    final.to_csv('final.csv',index=False)
+
+def feature_extraction_aggregate():
+    df=pd.read_csv('RealData270.csv')
+    df = df.append(add_psychological_features(add_opposite_games(df=df,is_individuals=False,baseline='BEASTpred'),is_individuals=False,baseline='BEASTpred'))
+    df['MSE']=df.apply(lambda x: mean_squared_error(x[['B.'+str(i) for i in range(1,6)]],x[['BEASTpred.'+str(i) for i in range(1,6)]]),axis=1)
+    def good_bad(MSE):
+        if MSE<0.01:
+            return 1
+        else:
+            return 0
+    df['good_bad']=df.apply(lambda x: good_bad(x['MSE']),axis=1)
+    df.to_csv('aggregate.csv',index=False)
+
+def feature_extraction_per_game_and_player():
+    df = pd.read_csv('All_estimation_raw_data.csv')
+    df=change_to_one_hot(df)
+    def baseline(SubjID, GameID, Trial,
+                 df):  # set as baseline the average of all of the other participents' decision per trial and game
+        return df[(df['SubjID'] != SubjID) & (df['GameID'] == GameID) & (df['Trial'] == Trial)]['B'].mean()
+    df['baseline'] = df.apply(lambda x: baseline(x['SubjID'], x['GameID'], x['Trial'], df), axis=1)
+    print("baseline done")
+    per_game_and_player = df.drop(columns=['Trial', 'R', 'B', 'Payoff', 'Forgone', 'RT', 'Apay', 'Bpay', 'Feedback','block']).drop_duplicates()
+    def avg_per_block(SubjID, GameID, block, B,
+          df):  # calculates the average decision/baseline per block and game of each participent
+        return df[(df['SubjID'] == SubjID) & (df['GameID'] == GameID) & (df['block'] == block)][B].mean()
+    for block in range(1, 6):
+        per_game_and_player['B.' + str(block)] = per_game_and_player.apply(
+            lambda x: avg_per_block(x['SubjID'], x['GameID'], block, 'B', df), axis=1)
+        print("B."+str(block)+" done")
+        per_game_and_player['B_baseline.' + str(block)] = per_game_and_player.apply(
+            lambda x: avg_per_block(x['SubjID'], x['GameID'], block, 'baseline', df), axis=1)
+        print("B_baseline." + str(block) + " done")
+        per_game_and_player['Apay.' + str(block)] = per_game_and_player.apply(
+            lambda x: avg_per_block(x['SubjID'], x['GameID'], block, 'Apay', df), axis=1)
+        print("Apay." + str(block) + " done")
+        per_game_and_player['Bpay.' + str(block)] = per_game_and_player.apply(
+            lambda x: avg_per_block(x['SubjID'], x['GameID'], block, 'Bpay', df), axis=1)
+        print("Bpay." + str(block) + " done")
+    per_game_and_player['MSE']=per_game_and_player.apply(lambda x: mean_squared_error(x[['B.'+str(i) for i in range(1,6)]],x[['B_baeline.'+str(i) for i in range(1,6)]]),axis=1)
+    print("MSE done")
+    def good_bad(MSE):
+        if MSE<0.1:
+            return 1
+        else:
+            return 0
+    per_game_and_player['good_bad']=per_game_and_player.apply(lambda x: good_bad(x['MSE']),axis=1)
+    per_game_and_player = per_game_and_player.append(add_psychological_features(add_opposite_games(df=per_game_and_player,is_individuals=False,baseline='B_baseline',per_game_and_player=True),is_individuals=False,baseline='B_baseline',per_game_and_player=True))
+    per_game_and_player.to_csv('per_game_and_player.csv',index=False)
+    def avg(df,ID,column,val):
+        return df[df[column]==ID][val].mean()
+    def var(df,ID,column,val):
+        return df[df[column]==ID][val].var()
+    per_player=per_game_and_player[['M','Age','Technion','SubjID']].drop_duplicates()
+    per_player['MSE']=per_player.apply(lambda x: avg(df,x['SubjID']),axis=1)
+    per_player['MSE_var'] = per_player.apply(lambda x: var(df, x['SubjID']), axis=1)
+    per_player['good_bad'] = per_player.apply(lambda x: good_bad(x['MSE']), axis=1)
+    per_player.to_csv('per_player.csv',index=False)
+    per_game=per_game_and_player[per_game_and_player.drop(columns=['M','Age','Technion','SubjID','MSE','Apay.1','Bpay.1','B.1','BEASTpred.1','Apay.2','Bpay.2','B.2','BEASTpred.2','Apay.3','Bpay.3','B.3','BEASTpred.3','Apay.4','Bpay.4','B.4','BEASTpred.4','Apay.5','Bpay.5','B.5','BEASTpred.5']).columns].drop_duplicates()
+    per_game['MSE']=per_game.apply(lambda x: avg(df,x['SubjID'],'MSE'),axis=1)
+    per_game['MSE_var'] = per_game.apply(lambda x: var(df, x['SubjID'],'MSE'), axis=1)
+    per_game['good_bad'] = per_game.apply(lambda x: good_bad(x['MSE']), axis=1)
+    per_game['Apay'] = per_game.apply(lambda x: avg(df, x['SubjID'],'Apay'), axis=1)
+    per_game['Bpay'] = per_game.apply(lambda x: avg(df, x['SubjID'],'Bpay'), axis=1)
+    per_game['Apay_var'] = per_game.apply(lambda x: var(df, x['SubjID'],'Apay'), axis=1)
+    per_game['Bpay_var'] = per_game.apply(lambda x: var(df, x['SubjID'],'Bpay'), axis=1)
+    per_game.to_csv('per_game.csv', index=False)
+
+
+
+
 
 def to_B1(train):
     df2 = train[train['block'] == 1].drop(columns=['BEASTpred', 'B_rate', 'block', 'Feedback'])
@@ -578,7 +691,7 @@ def to_B1(train):
 def logistic(B,X):
     return 1/(1+np.exp(-B*X))
 
-def calc_weights(B,BEVb,BEVa,val_dist,probs,Corr):
+def calc_bias_weights(B,BEVb,BEVa,val_dist,probs,Corr):
     kapa={}
     for k1 in ['unb','uni','pes','sig']:
         kapa[k1]=[0,0]
@@ -655,13 +768,69 @@ def calc_weights(B,BEVb,BEVa,val_dist,probs,Corr):
                          probs[k1+'_'+k2+'_'+k3].append(kapa[k1+'_'+k2+'_'+k3][1]/3)
     return probs
 
-def lot_shape_convert2(lot_shape):
-    if (lot_shape == [1, 0, 0, 0]).all(): return '-'
-    if (lot_shape == [0, 1, 0, 0]).all(): return 'Symm'
-    if (lot_shape == [0, 0, 1, 0]).all(): return 'L-skew'
-    if (lot_shape == [0, 0, 0, 1]).all(): return 'R-skew'
+def add_bias_weights(Data,B,name):
+    probs = {}
+    for k1 in ['unb', 'uni', 'pes', 'sig']:
+        probs[k1] = []
+        for k2 in ['unb', 'uni', 'pes', 'sig']:
+            probs[k1 + '_' + k2] = []
+            for k3 in ['unb', 'uni', 'pes', 'sig']:
+                probs[k1 + '_' + k2 + '_' + k3] = []
+    Data = Data[Data['Amb'] == 0]
+    nProblems = Data.shape[0]
+    Data.index = range(nProblems)
+    for prob in range(0, nProblems, 5):
+        Ha = Data['Ha'][prob]
+        pHa = Data['pHa'][prob]
+        La = Data['La'][prob]
+        LotShapeA = lot_shape_convert2(
+            Data[['lot_shape__A', 'lot_shape_symm_A', 'lot_shape_L_A', 'lot_shape_R_A']].values[prob])
+        LotNumA = int(Data['LotNumA'][prob])
+        Hb = Data['Hb'][prob]
+        pHb = Data['pHb'][prob]
+        Lb = Data['Lb'][prob]
+        LotShapeB = lot_shape_convert2(
+            Data[['lot_shape__B', 'lot_shape_symm_B', 'lot_shape_L_B', 'lot_shape_R_B']].values[prob])
+        LotNumB = int(Data['LotNumB'][prob])
+        Amb = Data['Amb'][prob]
+        Corr = Data['Corr'][prob]
+        DistA = CPC18_getDist(Ha, pHa, La, LotShapeA, LotNumA)
+        DistB = CPC18_getDist(Hb, pHb, Lb, LotShapeB, LotNumB)
+        nA = DistA.shape[0]
+        nB = DistB.shape[0]
+        MinA = DistA[0, 0]
+        MinB = DistB[0, 0]
+        MaxOutcome = np.maximum(DistA[nA - 1, 0], DistB[nB - 1, 0])
+        SignMax = np.sign(MaxOutcome)
+        if MinA == MinB:
+            RatioMin = 1
+        elif np.sign(MinA) == np.sign(MinB):
+            RatioMin = min(abs(MinA), abs(MinB)) / max(abs(MinA), abs(MinB))
+        else:
+            RatioMin = 0
+        Range = MaxOutcome - min(MinA, MinB)
+        BEVa = np.matrix.dot(DistA[:, 0], DistA[:, 1])
+        BEVb = np.matrix.dot(DistB[:, 0], DistB[:, 1])
+        val_dist = {}
+        val_dist['unb'] = [DistA[:, 0], np.concatenate(([0], np.cumsum(DistA[:, 1]))), DistB[:, 0],
+                           np.concatenate(([0], np.cumsum(DistB[:, 1])))]
+        val_dist['uni'] = [DistA[:, 0], np.concatenate(([0], np.cumsum(np.repeat([1 / nA], nA)))), DistB[:, 0],
+                           np.concatenate(([0], np.cumsum(np.repeat([1 / nB], nB))))]
+        if SignMax > 0 and RatioMin < 0.25:
+            val_dist['pes'] = [np.array([MinA]), np.concatenate(([0], [1])), np.array([MinB]),
+                               np.concatenate(([0], [1]))]
+        else:
+            val_dist['pes'] = [DistA[:, 0], np.concatenate(([0], np.cumsum(np.repeat([1 / nA], nA)))), DistB[:, 0],
+                               np.concatenate(([0], np.cumsum(np.repeat([1 / nB], nB))))]
+        val_dist['sig'] = [Range * np.sign(DistA[:, 0]), np.concatenate(([0], np.cumsum(DistA[:, 1]))),
+                           Range * np.sign(DistB[:, 0]), np.concatenate(([0], np.cumsum(DistB[:, 1])))]
+        probs = calc_bias_weights(B, BEVb, BEVa, val_dist, probs, Corr)
+    for key in probs.keys():
+        Data[key] = probs[key]
+    Data.to_csv(name,index=False)
+    return Data
 
-def MSE(x,df,label):
+def MSE_biases(x,df,label):
     return mean_squared_error(df[label],
     x[0]*df['unb']+
     x[0]*x[0]*df['unb_unb']+
@@ -749,207 +918,22 @@ def MSE(x,df,label):
     x[3]*x[3]*x[3]*df['sig_sig_sig'])
 
 
-def find_probs(train,label):
-    x1 = minimize(fun=MSE, x0=np.array([0.25, 0.25, 0.25, 0.25]), args=(train[train['block'] == 1],label),
+def find_best_probs(train,label):
+    x1 = minimize(fun=MSE_biases, x0=np.array([0.25, 0.25, 0.25, 0.25]), args=(train[train['block'] == 1],label),
                   bounds=[(0., 1), (0., 1), (0., 1), (0., 1)],
                   constraints=({'type': 'eq', 'fun': lambda b: 1 - sum(b)},), method='slsqp').x
-    x2 = minimize(fun=MSE, x0=np.array([0.25, 0.25, 0.25, 0.25]), args=(train[train['block'] == 2],label),
+    x2 = minimize(fun=MSE_biases, x0=np.array([0.25, 0.25, 0.25, 0.25]), args=(train[train['block'] == 2],label),
                   bounds=[(0., 1), (0., 1), (0., 1), (0., 1)],
                   constraints=({'type': 'eq', 'fun': lambda b: 1 - sum(b)},), method='slsqp').x
-    x3 = minimize(fun=MSE, x0=np.array([0.25, 0.25, 0.25, 0.25]), args=(train[train['block'] == 3],label),
+    x3 = minimize(fun=MSE_biases, x0=np.array([0.25, 0.25, 0.25, 0.25]), args=(train[train['block'] == 3],label),
                   bounds=[(0., 1), (0., 1), (0., 1), (0., 1)],
                   constraints=({'type': 'eq', 'fun': lambda b: 1 - sum(b)},), method='slsqp').x
-    x4 = minimize(fun=MSE, x0=np.array([0.25, 0.25, 0.25, 0.25]), args=(train[train['block'] == 4],label),
+    x4 = minimize(fun=MSE_biases, x0=np.array([0.25, 0.25, 0.25, 0.25]), args=(train[train['block'] == 4],label),
                   bounds=[(0., 1), (0., 1), (0., 1), (0., 1)],
                   constraints=({'type': 'eq', 'fun': lambda b: 1 - sum(b)},), method='slsqp').x
-    x5 = minimize(fun=MSE, x0=np.array([0.25, 0.25, 0.25, 0.25]), args=(train[train['block'] == 5],label),
+    x5 = minimize(fun=MSE_biases, x0=np.array([0.25, 0.25, 0.25, 0.25]), args=(train[train['block'] == 5],label),
                   bounds=[(0., 1), (0., 1), (0., 1), (0., 1)],
                   constraints=({'type': 'eq', 'fun': lambda b: 1 - sum(b)},), method='slsqp').x
     return x1,x2,x3,x4,x5
 
-def find_weights(Data,B,name):
-    probs = {}
-    for k1 in ['unb', 'uni', 'pes', 'sig']:
-        probs[k1] = []
-        for k2 in ['unb', 'uni', 'pes', 'sig']:
-            probs[k1 + '_' + k2] = []
-            for k3 in ['unb', 'uni', 'pes', 'sig']:
-                probs[k1 + '_' + k2 + '_' + k3] = []
-    Data = Data[Data['Amb'] == 0]
-    nProblems = Data.shape[0]
-    Data.index = range(nProblems)
-    for prob in range(0, nProblems, 5):
-        logging.info(str(prob/5))
-        print(prob/5,datetime.now())
-        Ha = Data['Ha'][prob]
-        pHa = Data['pHa'][prob]
-        La = Data['La'][prob]
-        LotShapeA = lot_shape_convert2(
-            Data[['lot_shape__A', 'lot_shape_symm_A', 'lot_shape_L_A', 'lot_shape_R_A']].values[prob])
-        LotNumA = int(Data['LotNumA'][prob])
-        Hb = Data['Hb'][prob]
-        pHb = Data['pHb'][prob]
-        Lb = Data['Lb'][prob]
-        LotShapeB = lot_shape_convert2(
-            Data[['lot_shape__B', 'lot_shape_symm_B', 'lot_shape_L_B', 'lot_shape_R_B']].values[prob])
-        LotNumB = int(Data['LotNumB'][prob])
-        Amb = Data['Amb'][prob]
-        Corr = Data['Corr'][prob]
-        DistA = CPC18_getDist(Ha, pHa, La, LotShapeA, LotNumA)
-        DistB = CPC18_getDist(Hb, pHb, Lb, LotShapeB, LotNumB)
-        nA = DistA.shape[0]
-        nB = DistB.shape[0]
-        MinA = DistA[0, 0]
-        MinB = DistB[0, 0]
-        MaxOutcome = np.maximum(DistA[nA - 1, 0], DistB[nB - 1, 0])
-        SignMax = np.sign(MaxOutcome)
-        if MinA == MinB:
-            RatioMin = 1
-        elif np.sign(MinA) == np.sign(MinB):
-            RatioMin = min(abs(MinA), abs(MinB)) / max(abs(MinA), abs(MinB))
-        else:
-            RatioMin = 0
-        Range = MaxOutcome - min(MinA, MinB)
-        BEVa = np.matrix.dot(DistA[:, 0], DistA[:, 1])
-        BEVb = np.matrix.dot(DistB[:, 0], DistB[:, 1])
-        val_dist = {}
-        val_dist['unb'] = [DistA[:, 0], np.concatenate(([0], np.cumsum(DistA[:, 1]))), DistB[:, 0],
-                           np.concatenate(([0], np.cumsum(DistB[:, 1])))]
-        val_dist['uni'] = [DistA[:, 0], np.concatenate(([0], np.cumsum(np.repeat([1 / nA], nA)))), DistB[:, 0],
-                           np.concatenate(([0], np.cumsum(np.repeat([1 / nB], nB))))]
-        if SignMax > 0 and RatioMin < 0.25:
-            val_dist['pes'] = [np.array([MinA]), np.concatenate(([0], [1])), np.array([MinB]),
-                               np.concatenate(([0], [1]))]
-        else:
-            val_dist['pes'] = [DistA[:, 0], np.concatenate(([0], np.cumsum(np.repeat([1 / nA], nA)))), DistB[:, 0],
-                               np.concatenate(([0], np.cumsum(np.repeat([1 / nB], nB))))]
-        val_dist['sig'] = [Range * np.sign(DistA[:, 0]), np.concatenate(([0], np.cumsum(DistA[:, 1]))),
-                           Range * np.sign(DistB[:, 0]), np.concatenate(([0], np.cumsum(DistB[:, 1])))]
-        probs = calc_weights(B, BEVb, BEVa, val_dist, probs, Corr)
-        for key in probs.keys():
-            if len(probs[key])!=prob+5:
-                print(prob,len(probs[key]),key)
-    for key in probs.keys():
-        Data[key] = probs[key]
-    Data.to_csv(name,index=False)
-    return Data
-
-if __name__ == '__main__':
-    train=pd.read_csv('TrainDataWeights210.csv')
-    test=pd.read_csv('TestDataWeights60.csv')
-    #df=pd.read_csv('SyntheticDataWeights5000.csv')
-    x1,x2,x3,x4,x5=find_probs(train,'B_rate')
-    #print("synthetic BEASTpred")
-    print("Train MSE")
-    print(x1, MSE(x1, train[train['block'] == 1],'B_rate'))
-    print(x2, MSE(x2, train[train['block'] == 2],'B_rate'))
-    print(x3, MSE(x3, train[train['block'] == 3],'B_rate'))
-    print(x4, MSE(x4, train[train['block'] == 4],'B_rate'))
-    print(x5, MSE(x5, train[train['block'] == 5],'B_rate'))
-    print("Test MSE")
-    print(x1, MSE(x1, test[test['block'] == 1],'B_rate'))
-    print(x2, MSE(x2, test[test['block'] == 2],'B_rate'))
-    print(x3, MSE(x3, test[test['block'] == 3],'B_rate'))
-    print(x4, MSE(x4, test[test['block'] == 4],'B_rate'))
-    print(x5, MSE(x5, test[test['block'] == 5],'B_rate'))
-    """
-    data=train.append(test)
-    # data=data[data['GameID']>30]
-    # for i in range(5):
-    # probs=np.random.choice(range(30,271), 48)
-    # train=Data[~Data['GameID'].isin(probs)]
-    # test=Data[Data['GameID'].isin(probs)]
-    a1 = data[data['lot_shape__A'] == 1]
-    a2 = a1[a1['pHa'] < 1]
-    a1 = a1[a1['pHa'] == 1]
-    a3 = data[data['lot_shape__A'] == 0]
-
-    a1_b1 = a1[a1['lot_shape__B'] == 1]
-    a1_b2 = a1_b1[a1_b1['pHb'] < 1]
-    a1_b1 = a1_b1[a1_b1['pHb'] == 1]
-    a1_b3 = a1[a1['lot_shape__B'] == 0]
-
-    a2_b1 = a2[a2['lot_shape__B'] == 1]
-    a2_b2 = a2_b1[a2_b1['pHb'] < 1]
-    a2_b1 = a2_b1[a2_b1['pHb'] == 1]
-    a2_b3 = a2[a2['lot_shape__B'] == 0]
-
-    a3_b1 = a3[a3['lot_shape__B'] == 1]
-    a3_b2 = a3_b1[a3_b1['pHb'] < 1]
-    a3_b1 = a3_b1[a3_b1['pHb'] == 1]
-    a3_b3 = a3[a3['lot_shape__B'] == 0]
-    one_vs_one = a1_b1
-    one_vs_two = a1_b2.append(a2_b1)
-    one_vs_three = a1_b3.append(a3_b1)
-    two_vs_two = a2_b2
-    two_vs_three = a3_b2.append(a2_b3)
-    three_vs_three = a3_b3
-
-    names = ['one_vs_one', 'one_vs_two', 'one_vs_three', 'two_vs_two', 'two_vs_three', 'three_vs_three']
-    dfs = [one_vs_one, one_vs_two, one_vs_three, two_vs_two, two_vs_three, three_vs_three]
-    probas=['Punb','Puni','Ppes','Psig']
-    for i in range(len(names)):
-        df=dfs[i]
-        leng=int(len(df)/5)
-        print(names[i],leng)
-        if leng>0:
-            train=df[df['GameID']<211]
-            test=df[df['GameID']>210]
-            leng_train=int(len(train)/5)
-            leng_test=int(len(test)/5)
-            print(leng_train,leng_test)
-            if len(train)>0 and len(test)>0:
-                x1,x2,x3,x4,x5=find_probs(train,'BEASTpred')
-                print("real BEASTpred")
-                print(x1, MSE(x1, train[train['block'] == 1],'BEASTpred'))
-                print(x2, MSE(x2, train[train['block'] == 2],'BEASTpred'))
-                print(x3, MSE(x3, train[train['block'] == 3],'BEASTpred'))
-                print(x4, MSE(x4, train[train['block'] == 4],'BEASTpred'))
-                print(x5, MSE(x5, train[train['block'] == 5],'BEASTpred'))
-                print("real B_rate")
-                print(x1, MSE(x1, train[train['block'] == 1],'B_rate'))
-                print(x2, MSE(x2, train[train['block'] == 2],'B_rate'))
-                print(x3, MSE(x3, train[train['block'] == 3],'B_rate'))
-                print(x4, MSE(x4, train[train['block'] == 4],'B_rate'))
-                print(x5, MSE(x5, train[train['block'] == 5],'B_rate'))
-                for i in range(4):
-                    tmp=[]
-                    for j in range(leng_train):
-                        for x in [x1,x2,x3,x4,x5]:
-                            tmp.append(x[i])
-                    train[probas[i]]=tmp
-                    tmp = []
-                    for j in range(leng_test):
-                        for x in [x1,x2,x3,x4,x5]:
-                            tmp.append(x[i])
-                    test[probas[i]]=tmp
-                train2=create_syntetic_dataset(train,is_probs=True,original=False)
-                test2 = create_syntetic_dataset(test,is_probs=True,original=False)
-                print("train",mean_squared_error(train2['B_rate'],train2['BEASTpred']))
-                print("test", mean_squared_error(test2['B_rate'], test2['BEASTpred']))
-                x1,x2,x3,x4,x5=find_probs(train,'B_rate')
-                print("real B_rate")
-                print(x1, MSE(x1, train[train['block'] == 1],'B_rate'))
-                print(x2, MSE(x2, train[train['block'] == 2],'B_rate'))
-                print(x3, MSE(x3, train[train['block'] == 3],'B_rate'))
-                print(x4, MSE(x4, train[train['block'] == 4],'B_rate'))
-                print(x5, MSE(x5, train[train['block'] == 5],'B_rate'))
-                for i in range(4):
-                    tmp=[]
-                    for j in range(leng_train):
-                        for x in [x1,x2,x3,x4,x5]:
-                            tmp.append(x[i])
-                    train[probas[i]]=tmp
-                    tmp = []
-                    for j in range(leng_test):
-                        for x in [x1,x2,x3,x4,x5]:
-                            tmp.append(x[i])
-                    test[probas[i]]=tmp
-                train2=create_syntetic_dataset(train,is_probs=True,original=False)
-                test2 = create_syntetic_dataset(test,is_probs=True,original=False)
-                print("train",mean_squared_error(train2['B_rate'],train2['BEASTpred']))
-                print("test", mean_squared_error(test2['B_rate'], test2['BEASTpred']))
-    """
-
-
-
+#if __name__ == '__main__':
