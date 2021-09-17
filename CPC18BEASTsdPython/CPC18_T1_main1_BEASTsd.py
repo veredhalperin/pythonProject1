@@ -6,14 +6,19 @@ import os
 import pandas as pd
 import numpy as np
 import time
-from CPC18_BEASTsd_pred import CPC18_BEASTsd_pred
+from .CPC18_BEASTsd_pred import CPC18_BEASTsd_pred
+def lot_shape_convert2(lot_shape):
+    if (lot_shape == [1, 0, 0, 0]).all(): return '-'
+    if (lot_shape == [0, 1, 0, 0]).all(): return 'Symm'
+    if (lot_shape == [0, 0, 1, 0]).all(): return 'L-skew'
+    if (lot_shape == [0, 0, 0, 1]).all(): return 'R-skew'
 
 if __name__ == '__main__':
     ####################################################
     ### Section B: Please do not change this section ###
     ####################################################
     # load problems to predict (in this example, the estimation set problems)
-    Data = pd.read_csv('CPC18_EstSet.csv')
+    Data = pd.read_csv('c13k_selections.csv')
     # useful variables
     nProblems = Data.shape[0]
     PredictedAll = np.zeros(shape=(nProblems, 5))
@@ -27,12 +32,16 @@ if __name__ == '__main__':
         Ha = Data['Ha'][prob]
         pHa = Data['pHa'][prob]
         La = Data['La'][prob]
-        LotShapeA = Data['LotShapeA'][prob]
+        #LotShapeA = Data['LotShapeA'][prob]
+        LotShapeA = lot_shape_convert2(
+            Data[['lot_shape__A', 'lot_shape_symm_A', 'lot_shape_L_A', 'lot_shape_R_A']].values[prob])
         LotNumA = Data['LotNumA'][prob]
         Hb = Data['Hb'][prob]
         pHb = Data['pHb'][prob]
         Lb = Data['Lb'][prob]
-        LotShapeB = Data['LotShapeB'][prob]
+        #LotShapeB = Data['LotShapeB'][prob]
+        LotShapeB = lot_shape_convert2(
+            Data[['lot_shape__B', 'lot_shape_symm_B', 'lot_shape_L_B', 'lot_shape_R_B']].values[prob])
         LotNumB = Data['LotNumB'][prob]
         Amb = Data['Amb'][prob]
         Corr = Data['Corr'][prob]

@@ -1,7 +1,7 @@
 import numpy as np
-from CPC18_getDist import CPC18_getDist
-from get_pBetter import get_pBetter
-from CPC18_BEASTsd_simulation import CPC18_BEASTsd_simulation
+from .CPC18_getDist import CPC18_getDist
+from .get_pBetter import get_pBetter
+from .CPC18_BEASTsd_simulation import CPC18_BEASTsd_simulation
 
 
 def CPC18_BEASTsd_pred(Ha, pHa, La, LotShapeA, LotNumA, Hb, pHb, Lb, LotShapeB, LotNumB, Amb, Corr):

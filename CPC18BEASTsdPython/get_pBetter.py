@@ -1,5 +1,5 @@
 import numpy as np
-from distSample import distSample
+from .distSample import distSample
 
 
 def get_pBetter(DistX, DistY, corr, accuracy=10000):

@@ -1,5 +1,5 @@
 import numpy as np
-from distSample import distSample
+from .distSample import distSample
 
 
 def CPC18_BEASTsd_simulation(DistA, DistB, Amb, Corr, probsBetter):
