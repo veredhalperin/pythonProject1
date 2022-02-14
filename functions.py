@@ -1,3 +1,5 @@
+import datetime
+
 from scipy.optimize import minimize
 from CPC18PsychForestPython.distSample import distSample
 from CPC18PsychForestPython.CPC18_getDist import CPC18_getDist
@@ -99,12 +101,12 @@ def calc_avg_difference(Data):
         print(i)
         df = pd.read_csv(str(i) + '.csv')
         for j in range(5):
-            df['avg_difference_' + str(j)] = df.apply(lambda x: avg_difference(x1['BEVa'], x1['BEVb'],
+            df['avg_difference_' + str(j)] = df.apply(lambda x: avg_difference(x['BEVa'], x['BEVb'],
                                                                                np.array(
-                                                                                   [x1['STa_' + str(i) + '_' + str(j)]
+                                                                                   [x['STa_' + str(i) + '_' + str(j)]
                                                                                     for i in range(4000)]),
                                                                                np.array(
-                                                                                   [x1['STb_' + str(i) + '_' + str(j)]
+                                                                                   [x['STb_' + str(i) + '_' + str(j)]
                                                                                     for i in range(4000)]), ), axis=1)
         df['avg_difference'] = (df['avg_difference_0'] + df['avg_difference_1'] + df['avg_difference_2'] + df[
             'avg_difference_3'] + df['avg_difference_4']) / 5
@@ -313,7 +315,7 @@ def add_opposite_games(df, is_individuals, baseline=None, per_game_and_player=Fa
         opposite[shape + 'B'] = non_amb[shape + 'A']
     opposite['LotNumB'] = non_amb['LotNumA']
     if is_individuals:
-        opposite['R'] = non_amb.apply(lambda x: R(x1['R']), axis=1)
+        opposite['R'] = non_amb.apply(lambda x: R(x['R']), axis=1)
         opposite['B'] = 1 - non_amb['B']
         opposite['Apay'] = non_amb['Bpay']
         opposite['Bpay'] = non_amb['Apay']
@@ -328,19 +330,19 @@ def add_opposite_games(df, is_individuals, baseline=None, per_game_and_player=Fa
 
 
 def change_to_one_hot(df, only_shapes=True):
-    df['lot_shape__A'] = df.apply(lambda x: one_hot(x1['LotShapeA'], '-'), axis=1)
-    df['lot_shape_symm_A'] = df.apply(lambda x: one_hot(x1['LotShapeA'], 'Symm'), axis=1)
-    df['lot_shape_R_A'] = df.apply(lambda x: one_hot(x1['LotShapeA'], 'R-skew'), axis=1)
-    df['lot_shape_L_A'] = df.apply(lambda x: one_hot(x1['LotShapeA'], 'L-skew'), axis=1)
-    df['lot_shape__B'] = df.apply(lambda x: one_hot(x1['LotShapeB'], '-'), axis=1)
-    df['lot_shape_symm_B'] = df.apply(lambda x: one_hot(x1['LotShapeB'], 'Symm'), axis=1)
-    df['lot_shape_R_B'] = df.apply(lambda x: one_hot(x1['LotShapeB'], 'R-skew'), axis=1)
-    df['lot_shape_L_B'] = df.apply(lambda x: one_hot(x1['LotShapeB'], 'L-skew'), axis=1)
+    df['lot_shape__A'] = df.apply(lambda x: one_hot(x['LotShapeA'], '-'), axis=1)
+    df['lot_shape_symm_A'] = df.apply(lambda x: one_hot(x['LotShapeA'], 'Symm'), axis=1)
+    df['lot_shape_R_A'] = df.apply(lambda x: one_hot(x['LotShapeA'], 'R-skew'), axis=1)
+    df['lot_shape_L_A'] = df.apply(lambda x: one_hot(x['LotShapeA'], 'L-skew'), axis=1)
+    df['lot_shape__B'] = df.apply(lambda x: one_hot(x['LotShapeB'], '-'), axis=1)
+    df['lot_shape_symm_B'] = df.apply(lambda x: one_hot(x['LotShapeB'], 'Symm'), axis=1)
+    df['lot_shape_R_B'] = df.apply(lambda x: one_hot(x['LotShapeB'], 'R-skew'), axis=1)
+    df['lot_shape_L_B'] = df.apply(lambda x: one_hot(x['LotShapeB'], 'L-skew'), axis=1)
     if only_shapes:
         return df.drop(columns=['LotShapeA', 'LotShapeB'])
-    df['R'] = df.apply(lambda x: one_hot(x1['Button'], 'R'), axis=1)
-    df['Technion'] = df.apply(lambda x: one_hot(x1['Location'], 'Technion'), axis=1)
-    df['M'] = df.apply(lambda x: one_hot(x1['Gender'], 'M'), axis=1)
+    df['R'] = df.apply(lambda x: one_hot(x['Button'], 'R'), axis=1)
+    df['Technion'] = df.apply(lambda x: one_hot(x['Location'], 'Technion'), axis=1)
+    df['M'] = df.apply(lambda x: one_hot(x['Gender'], 'M'), axis=1)
     return df.drop(columns=['Button', 'Location', 'LotShapeA', 'LotShapeB', 'Gender'])
 
 
@@ -352,8 +354,8 @@ def feature_extration_individuals():
     # adds opposite games for non amb games
     df = df.append(add_opposite_games(df, is_individuals=True))
     # adds category of num of outcomes
-    df['a'] = df.apply(lambda x: Outcomes(x1['LotShapeA'], x1['pHa']), axis=1)
-    df['b'] = df.apply(lambda x: Outcomes(x1['LotShapeB'], x1['pHb']), axis=1)
+    df['a'] = df.apply(lambda x: Outcomes(x['LotShapeA'], x['pHa']), axis=1)
+    df['b'] = df.apply(lambda x: Outcomes(x['LotShapeB'], x['pHb']), axis=1)
     # adds luck level per game,trial,and participent comnination
     Data = df[
         ['GameID', 'Ha', 'pHa', 'La', 'LotShapeA', 'LotNumA', 'Hb', 'pHb', 'Lb', 'LotShapeB', 'LotNumB', 'Amb', 'Corr',
@@ -455,7 +457,7 @@ def feature_extration_individuals():
         by=['SubjID', 'Order', 'GameID', 'Trial'])
     # df = df2.append(add_psychological_features(df[df['GameID'] > 210][['GameID', 'Ha', 'pHa', 'La', 'lot_shape__A','lot_shape_symm_A','lot_shape_R_A','lot_shape_L_A', 'LotNumA', 'Hb', 'pHb', 'Lb',  'lot_shape__B','lot_shape_symm_B','lot_shape_R_B','lot_shape_L_B',  'LotNumB', 'Amb','Corr']].drop_duplicates()))
     # adds weather B is good
-    df['Good'] = df.apply(lambda x: is_good(x1['Bpay'], x1['Apay']), axis=1)
+    df['Good'] = df.apply(lambda x: is_good(x['Bpay'], x['Apay']), axis=1)
     final = df[df['Trial'] < 6].drop(columns=['luck_level_A', 'luck_level_B'])
     for i in range(-50, 257):
         for val in ['Apay', 'Bpay']:
@@ -479,19 +481,19 @@ def feature_extration_individuals():
                         tmp[i] += 1
                 relevant[val + '_' + str(value)] = tmp
             if trial == 6:
-                relevant[val + '_List'] = relevant.apply(lambda x: [x1[val]], axis=1)
+                relevant[val + '_List'] = relevant.apply(lambda x: [x[val]], axis=1)
             else:
                 relevant[val + '_List'] = old[val + '_List']
-                relevant[val + '_List'] = relevant.apply(lambda x: append(x1[val + '_List'], x1[val]), axis=1)
-            relevant[val + '_Mean'] = relevant.apply(lambda x: np.mean(x1[val + '_List']), axis=1)
-            relevant[val + '_Var'] = relevant.apply(lambda x: np.var(x1[val + '_List']), axis=1)
+                relevant[val + '_List'] = relevant.apply(lambda x: append(x[val + '_List'], x[val]), axis=1)
+            relevant[val + '_Mean'] = relevant.apply(lambda x: np.mean(x[val + '_List']), axis=1)
+            relevant[val + '_Var'] = relevant.apply(lambda x: np.var(x[val + '_List']), axis=1)
         for val in ['luck_level_A', 'luck_level_B']:
             if trial == 6:
-                relevant[val + '_List'] = relevant.apply(lambda x: [x1[val]], axis=1)
+                relevant[val + '_List'] = relevant.apply(lambda x: [x[val]], axis=1)
             else:
                 relevant[val + '_List'] = old[val + '_List']
-                relevant[val + '_List'] = relevant.apply(lambda x: append(x1[val + '_List'], x1[val]), axis=1)
-            relevant['luck_level_Mean'] = relevant.apply(lambda x: np.mean(x1[val + '_List']), axis=1)
+                relevant[val + '_List'] = relevant.apply(lambda x: append(x[val + '_List'], x[val]), axis=1)
+            relevant['luck_level_Mean'] = relevant.apply(lambda x: np.mean(x[val + '_List']), axis=1)
         for trial2 in range(6, trial + 1):
             if trial == trial2:
                 relevant['Good_' + str(trial2)] = relevant['Good']
@@ -510,8 +512,8 @@ def feature_extration_individuals():
 def feature_extraction_aggregate():
     df = pd.read_csv('RealData270.csv')
     # df = df.append(add_psychological_features(add_opposite_games(df=df,is_individuals=False,baseline='BEASTpred'),is_individuals=False,baseline='BEASTpred'))
-    df['MSE'] = df.apply(lambda x: mean_squared_error(x1[['B.' + str(i) for i in range(1, 6)]],
-                                                      x1[['BEASTpred.' + str(i) for i in range(1, 6)]]), axis=1)
+    df['MSE'] = df.apply(lambda x: mean_squared_error(x[['B.' + str(i) for i in range(1, 6)]],
+                                                      x[['BEASTpred.' + str(i) for i in range(1, 6)]]), axis=1)
 
     def good_bad(MSE):
         if MSE < 0.01:
@@ -519,7 +521,7 @@ def feature_extraction_aggregate():
         else:
             return 0
 
-    df['good_bad'] = df.apply(lambda x: good_bad(x1['MSE']), axis=1)
+    df['good_bad'] = df.apply(lambda x: good_bad(x['MSE']), axis=1)
     df.to_csv('aggregate.csv', index=False)
 
 
@@ -531,7 +533,7 @@ def feature_extraction_per_game_and_player():
                  df):  # set as baseline the average of all of the other participents' decision per trial and game
         return df[(df['SubjID'] != SubjID) & (df['GameID'] == GameID) & (df['Trial'] == Trial)]['B'].mean()
 
-    df['baseline'] = df.apply(lambda x: baseline(x1['SubjID'], x1['GameID'], x1['Trial'], df), axis=1)
+    df['baseline'] = df.apply(lambda x: baseline(x['SubjID'], x['GameID'], x['Trial'], df), axis=1)
     print("baseline done")
     per_game_and_player = df.drop(
         columns=['Trial', 'R', 'B', 'Payoff', 'Forgone', 'RT', 'Apay', 'Bpay', 'Feedback', 'block']).drop_duplicates()
@@ -542,20 +544,20 @@ def feature_extraction_per_game_and_player():
 
     for block in range(1, 6):
         per_game_and_player['B.' + str(block)] = per_game_and_player.apply(
-            lambda x: avg_per_block(x1['SubjID'], x1['GameID'], block, 'B', df), axis=1)
+            lambda x: avg_per_block(x['SubjID'], x['GameID'], block, 'B', df), axis=1)
         print("B." + str(block) + " done")
         per_game_and_player['B_baseline.' + str(block)] = per_game_and_player.apply(
-            lambda x: avg_per_block(x1['SubjID'], x1['GameID'], block, 'baseline', df), axis=1)
+            lambda x: avg_per_block(x['SubjID'], x['GameID'], block, 'baseline', df), axis=1)
         print("B_baseline." + str(block) + " done")
         per_game_and_player['Apay.' + str(block)] = per_game_and_player.apply(
-            lambda x: avg_per_block(x1['SubjID'], x1['GameID'], block, 'Apay', df), axis=1)
+            lambda x: avg_per_block(x['SubjID'], x['GameID'], block, 'Apay', df), axis=1)
         print("Apay." + str(block) + " done")
         per_game_and_player['Bpay.' + str(block)] = per_game_and_player.apply(
-            lambda x: avg_per_block(x1['SubjID'], x1['GameID'], block, 'Bpay', df), axis=1)
+            lambda x: avg_per_block(x['SubjID'], x['GameID'], block, 'Bpay', df), axis=1)
         print("Bpay." + str(block) + " done")
     per_game_and_player['MSE'] = per_game_and_player.apply(
-        lambda x: mean_squared_error(x1[['B.' + str(i) for i in range(1, 6)]],
-                                     x1[['B_baeline.' + str(i) for i in range(1, 6)]]), axis=1)
+        lambda x: mean_squared_error(x[['B.' + str(i) for i in range(1, 6)]],
+                                     x[['B_baeline.' + str(i) for i in range(1, 6)]]), axis=1)
     print("MSE done")
 
     def good_bad(MSE):
@@ -564,7 +566,7 @@ def feature_extraction_per_game_and_player():
         else:
             return 0
 
-    per_game_and_player['good_bad'] = per_game_and_player.apply(lambda x: good_bad(x1['MSE']), axis=1)
+    per_game_and_player['good_bad'] = per_game_and_player.apply(lambda x: good_bad(x['MSE']), axis=1)
     # per_game_and_player = per_game_and_player.append(add_psychological_features(add_opposite_games(df=per_game_and_player,is_individuals=False,baseline='B_baseline',per_game_and_player=True),is_individuals=False,baseline='B_baseline',per_game_and_player=True))
     per_game_and_player.to_csv('per_game_and_player.csv', index=False)
 
@@ -575,21 +577,21 @@ def feature_extraction_per_game_and_player():
         return df[df[column] == ID][val].var()
 
     per_player = per_game_and_player[['M', 'Age', 'Technion', 'SubjID']].drop_duplicates()
-    per_player['MSE'] = per_player.apply(lambda x: avg(df, x1['SubjID']), axis=1)
-    per_player['MSE_var'] = per_player.apply(lambda x: var(df, x1['SubjID']), axis=1)
-    per_player['good_bad'] = per_player.apply(lambda x: good_bad(x1['MSE']), axis=1)
+    per_player['MSE'] = per_player.apply(lambda x: avg(df, x['SubjID']), axis=1)
+    per_player['MSE_var'] = per_player.apply(lambda x: var(df, x['SubjID']), axis=1)
+    per_player['good_bad'] = per_player.apply(lambda x: good_bad(x['MSE']), axis=1)
     per_player.to_csv('per_player.csv', index=False)
     per_game = per_game_and_player[per_game_and_player.drop(
         columns=['M', 'Age', 'Technion', 'SubjID', 'MSE', 'Apay.1', 'Bpay.1', 'B.1', 'BEASTpred.1', 'Apay.2', 'Bpay.2',
                  'B.2', 'BEASTpred.2', 'Apay.3', 'Bpay.3', 'B.3', 'BEASTpred.3', 'Apay.4', 'Bpay.4', 'B.4',
                  'BEASTpred.4', 'Apay.5', 'Bpay.5', 'B.5', 'BEASTpred.5']).columns].drop_duplicates()
-    per_game['MSE'] = per_game.apply(lambda x: avg(df, x1['SubjID'], 'MSE'), axis=1)
-    per_game['MSE_var'] = per_game.apply(lambda x: var(df, x1['SubjID'], 'MSE'), axis=1)
-    per_game['good_bad'] = per_game.apply(lambda x: good_bad(x1['MSE']), axis=1)
-    per_game['Apay'] = per_game.apply(lambda x: avg(df, x1['SubjID'], 'Apay'), axis=1)
-    per_game['Bpay'] = per_game.apply(lambda x: avg(df, x1['SubjID'], 'Bpay'), axis=1)
-    per_game['Apay_var'] = per_game.apply(lambda x: var(df, x1['SubjID'], 'Apay'), axis=1)
-    per_game['Bpay_var'] = per_game.apply(lambda x: var(df, x1['SubjID'], 'Bpay'), axis=1)
+    per_game['MSE'] = per_game.apply(lambda x: avg(df, x['SubjID'], 'MSE'), axis=1)
+    per_game['MSE_var'] = per_game.apply(lambda x: var(df, x['SubjID'], 'MSE'), axis=1)
+    per_game['good_bad'] = per_game.apply(lambda x: good_bad(x['MSE']), axis=1)
+    per_game['Apay'] = per_game.apply(lambda x: avg(df, x['SubjID'], 'Apay'), axis=1)
+    per_game['Bpay'] = per_game.apply(lambda x: avg(df, x['SubjID'], 'Bpay'), axis=1)
+    per_game['Apay_var'] = per_game.apply(lambda x: var(df, x['SubjID'], 'Apay'), axis=1)
+    per_game['Bpay_var'] = per_game.apply(lambda x: var(df, x['SubjID'], 'Bpay'), axis=1)
     per_game.to_csv('per_game.csv', index=False)
 
 
@@ -613,338 +615,368 @@ def logistic(B, X):
 
 
 def calc_bias_weights(B, BEVb, BEVa, val_dist, probs,probs0, Corr):
+    biases=['unb', 'uni', 'pes', 'sig']
     kapa = {}
-    for k1 in ['unb', 'uni', 'pes', 'sig']:
-        kapa[k1] = [0, 0]
-        for k2 in ['unb', 'uni', 'pes', 'sig']:
-            kapa[k1 + '_' + k2] = [0, 0]
-            for k3 in ['unb', 'uni', 'pes', 'sig']:
-                kapa[k1 + '_' + k2 + '_' + k3] = [0, 0]
-    for k1 in ['unb', 'uni', 'pes', 'sig']:
-        val_A1, dist_A1, val_B1, dist_B1 = val_dist[k1][0], val_dist[k1][1], val_dist[k1][2], val_dist[k1][3]
+    for i in range(0,4):
+        kapa[biases[i]] = [0, 0]
+        for j in range(i,4):
+            kapa[biases[i] + '_' + biases[j]] = [0, 0]
+            for k in range(j,4):
+                kapa[biases[i] + '_' + biases[j] + '_' + biases[k]] = [0, 0]
+    for i in range(0,4):
+        val_A1, dist_A1, val_B1, dist_B1 = val_dist[biases[i]][0], val_dist[biases[i]][1], val_dist[biases[i]][2], val_dist[biases[i]][3]
         for i1 in range(val_A1.shape[0]):
             for j1 in range(val_B1.shape[0]):
                 if min(dist_A1[i1 + 1], dist_B1[j1 + 1]) > max(dist_A1[i1], dist_B1[j1]):
-                    kapa[k1][0] += (min(dist_A1[i1 + 1], dist_B1[j1 + 1]) - max(dist_A1[i1],dist_B1[j1])) * logistic(B,BEVb - BEVa +val_B1[j1] -val_A1[i1])
-                    for k2 in ['unb', 'uni', 'pes', 'sig']:
-                        val_A2, dist_A2, val_B2, dist_B2 = val_dist[k2][0], val_dist[k2][1], val_dist[k2][2],val_dist[k2][3]
+                    kapa[biases[i]][0] += (min(dist_A1[i1 + 1], dist_B1[j1 + 1]) - max(dist_A1[i1],dist_B1[j1])) * logistic(B,BEVb - BEVa +val_B1[j1] -val_A1[i1])
+                    for j in range(i,4):
+                        val_A2, dist_A2, val_B2, dist_B2 = val_dist[biases[j]][0], val_dist[biases[j]][1], val_dist[biases[j]][2],val_dist[biases[j]][3]
                         for i2 in range(val_A2.shape[0]):
                             for j2 in range(val_B2.shape[0]):
                                 if min(dist_A2[i2 + 1], dist_B2[j2 + 1]) > max(dist_A2[i2], dist_B2[j2]):
-                                    kapa[k1 + '_' + k2][0] += (min(dist_A1[i1 + 1], dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (min(dist_A2[i2 + 1], dist_B2[j2 + 1]) - max(dist_A2[i2], dist_B2[j2])) * logistic(B, BEVb - BEVa + (val_B1[j1] + val_B2[j2]) / 2 - (val_A1[i1] + val_A2[i2]) / 2)
-                                    for k3 in ['unb', 'uni', 'pes', 'sig']:
-                                        val_A3, dist_A3, val_B3, dist_B3 = val_dist[k3][0], val_dist[k3][1],val_dist[k3][2], val_dist[k3][3]
+                                    kapa[biases[i] + '_' + biases[j]][0] += (min(dist_A1[i1 + 1], dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (min(dist_A2[i2 + 1], dist_B2[j2 + 1]) - max(dist_A2[i2], dist_B2[j2])) * logistic(B, BEVb - BEVa + (val_B1[j1] + val_B2[j2]) / 2 - (val_A1[i1] + val_A2[i2]) / 2)
+                                    for k in range(j,4):
+                                        val_A3, dist_A3, val_B3, dist_B3 = val_dist[biases[k]][0], val_dist[biases[k]][1],val_dist[biases[k]][2], val_dist[biases[k]][3]
                                         for i3 in range(val_A3.shape[0]):
                                             for j3 in range(val_B3.shape[0]):
                                                 if min(dist_A3[i3 + 1], dist_B3[j3 + 1]) > max(dist_A3[i3],dist_B3[j3]):
-                                                    kapa[k1 + '_' + k2 + '_' + k3][0] += (min(dist_A1[i1 + 1],dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (min(dist_A2[i2 + 1],dist_B2[j2 + 1]) - max(dist_A2[i2], dist_B2[j2])) * (min(dist_A3[i3 + 1],dist_B3[j3 + 1]) - max(dist_A3[i3], dist_B3[j3])) * logistic(B, BEVb - BEVa + (val_B1[j1] + val_B2[j2] + val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
+                                                    kapa[biases[i] + '_' + biases[j] + '_' + biases[k]][0] += (min(dist_A1[i1 + 1],dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (min(dist_A2[i2 + 1],dist_B2[j2 + 1]) - max(dist_A2[i2], dist_B2[j2])) * (min(dist_A3[i3 + 1],dist_B3[j3 + 1]) - max(dist_A3[i3], dist_B3[j3])) * logistic(B, BEVb - BEVa + (val_B1[j1] + val_B2[j2] + val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
                 if Corr == -1:
-                    if min(dist_A1[i1 + 1], 1 - dist_B1[j1]) > max(dist_A1[i1], 1 - dist_B1[j1 + 1]) and k1 in ('unb', 'sig'):
-                        kapa[k1][1] += (min(dist_A1[i1 + 1], 1 - dist_B1[j1]) - max(dist_A1[i1],1 - dist_B1[j1 + 1])) * logistic(B, BEVb - BEVa +val_B1[j1] -val_A1[i1])
-                        for k2 in ['unb', 'uni', 'pes', 'sig']:
-                            val_A2, dist_A2, val_B2, dist_B2 = val_dist[k2][0], val_dist[k2][1], val_dist[k2][2],val_dist[k2][3]
+                    if min(dist_A1[i1 + 1], 1 - dist_B1[j1]) > max(dist_A1[i1], 1 - dist_B1[j1 + 1]) and biases[i] in ('unb', 'sig'):
+                        kapa[biases[i]][1] += (min(dist_A1[i1 + 1], 1 - dist_B1[j1]) - max(dist_A1[i1],1 - dist_B1[j1 + 1])) * logistic(B, BEVb - BEVa +val_B1[j1] -val_A1[i1])
+                        for j in range(i,4):
+                            val_A2, dist_A2, val_B2, dist_B2 = val_dist[biases[j]][0], val_dist[biases[j]][1], val_dist[biases[j]][2],val_dist[biases[j]][3]
                             for i2 in range(val_A2.shape[0]):
                                 for j2 in range(val_B2.shape[0]):
-                                    if min(dist_A2[i2 + 1], 1 - dist_B2[j2]) > max(dist_A2[i2],1 - dist_B2[j2 + 1]) and k2 in ('unb', 'sig'):
-                                        kapa[k1 + '_' + k2][1] += (min(dist_A1[i1 + 1], 1 - dist_B1[j1]) - max(dist_A1[i1], 1 - dist_B1[j1 + 1])) * (min(dist_A2[i2 + 1],1 - dist_B2[j2]) - max(dist_A2[i2], 1 - dist_B2[j2 + 1])) * logistic(B, BEVb - BEVa + (val_B1[j1] + val_B2[j2]) / 2 - (val_A1[i1] + val_A2[i2]) / 2)
-                                        for k3 in ['unb', 'uni', 'pes', 'sig']:
-                                            val_A3, dist_A3, val_B3, dist_B3 = val_dist[k3][0], val_dist[k3][1],val_dist[k3][2], val_dist[k3][3]
+                                    if min(dist_A2[i2 + 1], 1 - dist_B2[j2]) > max(dist_A2[i2],1 - dist_B2[j2 + 1]) and biases[j] in ('unb', 'sig'):
+                                        kapa[biases[i] + '_' + biases[j]][1] += (min(dist_A1[i1 + 1], 1 - dist_B1[j1]) - max(dist_A1[i1], 1 - dist_B1[j1 + 1])) * (min(dist_A2[i2 + 1],1 - dist_B2[j2]) - max(dist_A2[i2], 1 - dist_B2[j2 + 1])) * logistic(B, BEVb - BEVa + (val_B1[j1] + val_B2[j2]) / 2 - (val_A1[i1] + val_A2[i2]) / 2)
+                                        for k in range(j,4):
+                                            val_A3, dist_A3, val_B3, dist_B3 = val_dist[biases[k]][0], val_dist[biases[k]][1],val_dist[biases[k]][2], val_dist[biases[k]][3]
                                             for i3 in range(val_A3.shape[0]):
                                                 for j3 in range(val_B3.shape[0]):
-                                                    if min(dist_A3[i3 + 1], 1 - dist_B3[j3]) > max(dist_A3[i3],1 - dist_B3[j3 + 1]) and k3 in ('unb', 'sig'):
-                                                        kapa[k1 + '_' + k2 + '_' + k3][1] += (min(dist_A1[i1 + 1],1 - dist_B1[j1]) - max(dist_A1[i1], 1 - dist_B1[j1 + 1])) * (min(dist_A2[i2 + 1], 1 - dist_B2[j2]) - max(dist_A2[i2], 1 - dist_B2[j2 + 1])) * (min(dist_A3[i3 + 1],1 - dist_B3[j3]) - max(dist_A3[i3], 1 - dist_B3[j3 + 1])) * logistic(B, BEVb - BEVa + (val_B1[j1] +val_B2[j2] +val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
-                                                    elif min(dist_A3[i3 + 1], dist_B3[j3 + 1]) > max(dist_A3[i3],dist_B3[j3]) and k3 in ('uni', 'pes'):
-                                                        kapa[k1 + '_' + k2 + '_' + k3][1] += (min(dist_A1[i1 + 1],1 - dist_B1[j1]) - max(dist_A1[i1], 1 - dist_B1[j1 + 1])) * (min(dist_A2[i2 + 1],1 - dist_B2[j2]) - max(dist_A2[i2], 1 - dist_B2[j2 + 1])) * (min(dist_A3[i3 + 1], dist_B3[j3 + 1]) - max(dist_A3[i3],dist_B3[j3])) * logistic(B,BEVb - BEVa + (val_B1[j1] +val_B2[j2] +val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
-                                    elif min(dist_A2[i2 + 1], dist_B2[j2 + 1]) > max(dist_A2[i2], dist_B2[j2]) and k2 in ('uni', 'pes'):
-                                        kapa[k1 + '_' + k2][1] += (min(dist_A1[i1 + 1], 1 - dist_B1[j1]) - max(dist_A1[i1], 1 - dist_B1[j1 + 1])) * (min(dist_A2[i2 + 1],dist_B2[j2 + 1]) - max(dist_A2[i2], dist_B2[j2])) * logistic(B, BEVb - BEVa + (val_B1[j1] + val_B2[j2]) / 2 - (val_A1[i1] + val_A2[i2]) / 2)
-                                        for k3 in ['unb', 'uni', 'pes', 'sig']:
-                                            val_A3, dist_A3, val_B3, dist_B3 = val_dist[k3][0], val_dist[k3][1],val_dist[k3][2], val_dist[k3][3]
+                                                    if min(dist_A3[i3 + 1], 1 - dist_B3[j3]) > max(dist_A3[i3],1 - dist_B3[j3 + 1]) and biases[k] in ('unb', 'sig'):
+                                                        kapa[biases[i] + '_' + biases[j] + '_' + biases[k]][1] += (min(dist_A1[i1 + 1],1 - dist_B1[j1]) - max(dist_A1[i1], 1 - dist_B1[j1 + 1])) * (min(dist_A2[i2 + 1], 1 - dist_B2[j2]) - max(dist_A2[i2], 1 - dist_B2[j2 + 1])) * (min(dist_A3[i3 + 1],1 - dist_B3[j3]) - max(dist_A3[i3], 1 - dist_B3[j3 + 1])) * logistic(B, BEVb - BEVa + (val_B1[j1] +val_B2[j2] +val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
+                                                    elif min(dist_A3[i3 + 1], dist_B3[j3 + 1]) > max(dist_A3[i3],dist_B3[j3]) and biases[k] in ('uni', 'pes'):
+                                                        kapa[biases[i] + '_' + biases[j] + '_' + biases[k]][1] += (min(dist_A1[i1 + 1],1 - dist_B1[j1]) - max(dist_A1[i1], 1 - dist_B1[j1 + 1])) * (min(dist_A2[i2 + 1],1 - dist_B2[j2]) - max(dist_A2[i2], 1 - dist_B2[j2 + 1])) * (min(dist_A3[i3 + 1], dist_B3[j3 + 1]) - max(dist_A3[i3],dist_B3[j3])) * logistic(B,BEVb - BEVa + (val_B1[j1] +val_B2[j2] +val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
+                                    elif min(dist_A2[i2 + 1], dist_B2[j2 + 1]) > max(dist_A2[i2], dist_B2[j2]) and biases[j] in ('uni', 'pes'):
+                                        kapa[biases[i] + '_' + biases[j]][1] += (min(dist_A1[i1 + 1], 1 - dist_B1[j1]) - max(dist_A1[i1], 1 - dist_B1[j1 + 1])) * (min(dist_A2[i2 + 1],dist_B2[j2 + 1]) - max(dist_A2[i2], dist_B2[j2])) * logistic(B, BEVb - BEVa + (val_B1[j1] + val_B2[j2]) / 2 - (val_A1[i1] + val_A2[i2]) / 2)
+                                        for k in range(j,4):
+                                            val_A3, dist_A3, val_B3, dist_B3 = val_dist[biases[k]][0], val_dist[biases[k]][1],val_dist[biases[k]][2], val_dist[biases[k]][3]
                                             for i3 in range(val_A3.shape[0]):
                                                 for j3 in range(val_B3.shape[0]):
-                                                    if min(dist_A3[i3 + 1], 1 - dist_B3[j3]) > max(dist_A3[i3],1 - dist_B3[j3 + 1]) and k3 in ('unb', 'sig'):
-                                                        kapa[k1 + '_' + k2 + '_' + k3][1] += (min(dist_A1[i1 + 1],1 - dist_B1[j1]) - max(dist_A1[i1], 1 - dist_B1[j1 + 1])) * (min(dist_A2[i2 + 1], dist_B2[j2 + 1]) - max(dist_A2[i2],dist_B2[j2])) * (min(dist_A3[i3 + 1],1 -dist_B3[j3]) - max(dist_A3[i3],1 - dist_B3[j3 + 1])) * logistic(B,BEVb - BEVa + (val_B1[j1] +val_B2[j2] +val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
-                                                    elif min(dist_A3[i3 + 1], dist_B3[j3 + 1]) > max(dist_A3[i3],dist_B3[j3]) and k3 in ('uni', 'pes'):
-                                                        kapa[k1 + '_' + k2 + '_' + k3][1] += (min(dist_A1[i1 + 1],1 - dist_B1[j1]) - max(dist_A1[i1], 1 - dist_B1[j1 + 1])) * (min(dist_A2[i2 + 1], dist_B2[j2 + 1]) - max(dist_A2[i2],dist_B2[j2])) * (min(dist_A3[i3 + 1],dist_B3[j3 + 1]) - max(dist_A3[i3],dist_B3[j3])) * logistic(B,BEVb - BEVa + (val_B1[j1] +val_B2[j2] +val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
-                    elif min(dist_A1[i1 + 1], dist_B1[j1 + 1]) > max(dist_A1[i1], dist_B1[j1]) and k1 in ('uni', 'pes'):
-                        kapa[k1][1] += (min(dist_A1[i1 + 1], dist_B1[j1 + 1]) - max(dist_A1[i1],dist_B1[j1])) * logistic(B,BEVb - BEVa +val_B1[j1] -val_A1[i1])
-                        for k2 in ['unb', 'uni', 'pes', 'sig']:
-                            val_A2, dist_A2, val_B2, dist_B2 = val_dist[k2][0], val_dist[k2][1], val_dist[k2][2],val_dist[k2][3]
+                                                    if min(dist_A3[i3 + 1], 1 - dist_B3[j3]) > max(dist_A3[i3],1 - dist_B3[j3 + 1]) and biases[k] in ('unb', 'sig'):
+                                                        kapa[biases[i] + '_' + biases[j] + '_' + biases[k]][1] += (min(dist_A1[i1 + 1],1 - dist_B1[j1]) - max(dist_A1[i1], 1 - dist_B1[j1 + 1])) * (min(dist_A2[i2 + 1], dist_B2[j2 + 1]) - max(dist_A2[i2],dist_B2[j2])) * (min(dist_A3[i3 + 1],1 -dist_B3[j3]) - max(dist_A3[i3],1 - dist_B3[j3 + 1])) * logistic(B,BEVb - BEVa + (val_B1[j1] +val_B2[j2] +val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
+                                                    elif min(dist_A3[i3 + 1], dist_B3[j3 + 1]) > max(dist_A3[i3],dist_B3[j3]) and biases[k] in ('uni', 'pes'):
+                                                        kapa[biases[i] + '_' + biases[j] + '_' + biases[k]][1] += (min(dist_A1[i1 + 1],1 - dist_B1[j1]) - max(dist_A1[i1], 1 - dist_B1[j1 + 1])) * (min(dist_A2[i2 + 1], dist_B2[j2 + 1]) - max(dist_A2[i2],dist_B2[j2])) * (min(dist_A3[i3 + 1],dist_B3[j3 + 1]) - max(dist_A3[i3],dist_B3[j3])) * logistic(B,BEVb - BEVa + (val_B1[j1] +val_B2[j2] +val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
+                    elif min(dist_A1[i1 + 1], dist_B1[j1 + 1]) > max(dist_A1[i1], dist_B1[j1]) and biases[i] in ('uni', 'pes'):
+                        kapa[biases[i]][1] += (min(dist_A1[i1 + 1], dist_B1[j1 + 1]) - max(dist_A1[i1],dist_B1[j1])) * logistic(B,BEVb - BEVa +val_B1[j1] -val_A1[i1])
+                        for j in range(i,4):
+                            val_A2, dist_A2, val_B2, dist_B2 = val_dist[biases[j]][0], val_dist[biases[j]][1], val_dist[biases[j]][2],val_dist[biases[j]][3]
                             for i2 in range(val_A2.shape[0]):
                                 for j2 in range(val_B2.shape[0]):
-                                    if min(dist_A2[i2 + 1], 1 - dist_B2[j2]) > max(dist_A2[i2],1 - dist_B2[j2 + 1]) and k2 in ('unb', 'sig'):
-                                        kapa[k1 + '_' + k2][1] += (min(dist_A1[i1 + 1], dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (min(dist_A2[i2 + 1],1 - dist_B2[j2]) - max(dist_A2[i2], 1 - dist_B2[j2 + 1])) * logistic(B, BEVb - BEVa + (val_B1[j1] + val_B2[j2]) / 2 - (val_A1[i1] + val_A2[i2]) / 2)
-                                        for k3 in ['unb', 'uni', 'pes', 'sig']:
-                                            val_A3, dist_A3, val_B3, dist_B3 = val_dist[k3][0], val_dist[k3][1],val_dist[k3][2], val_dist[k3][3]
+                                    if min(dist_A2[i2 + 1], 1 - dist_B2[j2]) > max(dist_A2[i2],1 - dist_B2[j2 + 1]) and biases[j] in ('unb', 'sig'):
+                                        kapa[biases[i] + '_' + biases[j]][1] += (min(dist_A1[i1 + 1], dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (min(dist_A2[i2 + 1],1 - dist_B2[j2]) - max(dist_A2[i2], 1 - dist_B2[j2 + 1])) * logistic(B, BEVb - BEVa + (val_B1[j1] + val_B2[j2]) / 2 - (val_A1[i1] + val_A2[i2]) / 2)
+                                        for k in range(j,4):
+                                            val_A3, dist_A3, val_B3, dist_B3 = val_dist[biases[k]][0], val_dist[biases[k]][1],val_dist[biases[k]][2], val_dist[biases[k]][3]
                                             for i3 in range(val_A3.shape[0]):
                                                 for j3 in range(val_B3.shape[0]):
-                                                    if min(dist_A3[i3 + 1], 1 - dist_B3[j3]) > max(dist_A3[i3],1 - dist_B3[j3 + 1]) and k3 in ('unb', 'sig'):
-                                                        kapa[k1 + '_' + k2 + '_' + k3][1] += (min(dist_A1[i1 + 1],dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (min(dist_A2[i2 + 1],1 - dist_B2[j2]) - max(dist_A2[i2], 1 - dist_B2[j2 + 1])) * (min(dist_A3[i3 + 1],1 - dist_B3[j3]) - max(dist_A3[i3], 1 - dist_B3[j3 + 1])) * logistic(B,BEVb - BEVa + (val_B1[j1] +val_B2[j2] +val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
-                                                    elif min(dist_A3[i3 + 1], dist_B3[j3 + 1]) > max(dist_A3[i3],dist_B3[j3]) and k3 in ('uni', 'pes'):
-                                                        kapa[k1 + '_' + k2 + '_' + k3][1] += (min(dist_A1[i1 + 1],dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (min(dist_A2[i2 + 1],1 - dist_B2[j2]) - max(dist_A2[i2], 1 - dist_B2[j2 + 1])) * (min(dist_A3[i3 + 1],dist_B3[j3 + 1]) - max(dist_A3[i3], dist_B3[j3])) * logistic(B,BEVb - BEVa + (val_B1[j1] +val_B2[j2] +val_B3[j3]) / 3 - (val_A1[ i1] + val_A2[i2] +val_A3[i3]) / 3)
-                                    elif min(dist_A2[i2 + 1], dist_B2[j2 + 1]) > max(dist_A2[i2], dist_B2[j2]) and k2 in ('uni', 'pes'):
-                                        kapa[k1 + '_' + k2][1] += (min(dist_A1[i1 + 1], dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (min(dist_A2[i2 + 1],dist_B2[j2 + 1]) - max(dist_A2[i2], dist_B2[j2])) * logistic(B, BEVb - BEVa + (val_B1[j1] + val_B2[j2]) / 2 - (val_A1[i1] + val_A2[i2]) / 2)
-                                        for k3 in ['unb', 'uni', 'pes', 'sig']:
-                                            val_A3, dist_A3, val_B3, dist_B3 = val_dist[k3][0], val_dist[k3][1],val_dist[k3][2], val_dist[k3][3]
+                                                    if min(dist_A3[i3 + 1], 1 - dist_B3[j3]) > max(dist_A3[i3],1 - dist_B3[j3 + 1]) and biases[k] in ('unb', 'sig'):
+                                                        kapa[biases[i] + '_' + biases[j] + '_' + biases[k]][1] += (min(dist_A1[i1 + 1],dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (min(dist_A2[i2 + 1],1 - dist_B2[j2]) - max(dist_A2[i2], 1 - dist_B2[j2 + 1])) * (min(dist_A3[i3 + 1],1 - dist_B3[j3]) - max(dist_A3[i3], 1 - dist_B3[j3 + 1])) * logistic(B,BEVb - BEVa + (val_B1[j1] +val_B2[j2] +val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
+                                                    elif min(dist_A3[i3 + 1], dist_B3[j3 + 1]) > max(dist_A3[i3],dist_B3[j3]) and biases[k] in ('uni', 'pes'):
+                                                        kapa[biases[i] + '_' + biases[j] + '_' + biases[k]][1] += (min(dist_A1[i1 + 1],dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (min(dist_A2[i2 + 1],1 - dist_B2[j2]) - max(dist_A2[i2], 1 - dist_B2[j2 + 1])) * (min(dist_A3[i3 + 1],dist_B3[j3 + 1]) - max(dist_A3[i3], dist_B3[j3])) * logistic(B,BEVb - BEVa + (val_B1[j1] +val_B2[j2] +val_B3[j3]) / 3 - (val_A1[ i1] + val_A2[i2] +val_A3[i3]) / 3)
+                                    elif min(dist_A2[i2 + 1], dist_B2[j2 + 1]) > max(dist_A2[i2], dist_B2[j2]) and biases[j] in ('uni', 'pes'):
+                                        kapa[biases[i] + '_' + biases[j]][1] += (min(dist_A1[i1 + 1], dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (min(dist_A2[i2 + 1],dist_B2[j2 + 1]) - max(dist_A2[i2], dist_B2[j2])) * logistic(B, BEVb - BEVa + (val_B1[j1] + val_B2[j2]) / 2 - (val_A1[i1] + val_A2[i2]) / 2)
+                                        for k in range(j,4):
+                                            val_A3, dist_A3, val_B3, dist_B3 = val_dist[biases[k]][0], val_dist[biases[k]][1],val_dist[biases[k]][2], val_dist[biases[k]][3]
                                             for i3 in range(val_A3.shape[0]):
                                                 for j3 in range(val_B3.shape[0]):
-                                                    if min(dist_A3[i3 + 1], 1 - dist_B3[j3]) > max(dist_A3[i3],1 - dist_B3[j3 + 1]) and k3 in ('unb', 'sig'):
-                                                        kapa[k1 + '_' + k2 + '_' + k3][1] += (min(dist_A1[i1 + 1],dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (min(dist_A2[i2 + 1],dist_B2[j2 + 1]) - max(dist_A2[i2], dist_B2[j2])) * (min(dist_A3[i3 + 1],1 - dist_B3[j3]) - max(dist_A3[i3], 1 - dist_B3[j3 + 1])) * logistic(B,BEVb - BEVa + (val_B1[j1] +val_B2[j2] +val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] + val_A3[ i3]) / 3)
-                                                    elif min(dist_A3[i3 + 1], dist_B3[j3 + 1]) > max(dist_A3[i3],dist_B3[j3]) and k3 in ('uni', 'pes'):
-                                                        kapa[k1 + '_' + k2 + '_' + k3][1] += (min(dist_A1[i1 + 1],dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (min(dist_A2[i2 + 1],dist_B2[j2 + 1]) - max(dist_A2[i2], dist_B2[j2])) * (min(dist_A3[i3 + 1],dist_B3[j3 + 1]) - max(dist_A3[i3], dist_B3[j3])) * logistic(B,BEVb - BEVa + (val_B1[j1] + val_B2[j2] +val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
+                                                    if min(dist_A3[i3 + 1], 1 - dist_B3[j3]) > max(dist_A3[i3],1 - dist_B3[j3 + 1]) and biases[k] in ('unb', 'sig'):
+                                                        kapa[biases[i] + '_' + biases[j] + '_' + biases[k]][1] += (min(dist_A1[i1 + 1],dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (min(dist_A2[i2 + 1],dist_B2[j2 + 1]) - max(dist_A2[i2], dist_B2[j2])) * (min(dist_A3[i3 + 1],1 - dist_B3[j3]) - max(dist_A3[i3], 1 - dist_B3[j3 + 1])) * logistic(B,BEVb - BEVa + (val_B1[j1] +val_B2[j2] +val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] + val_A3[ i3]) / 3)
+                                                    elif min(dist_A3[i3 + 1], dist_B3[j3 + 1]) > max(dist_A3[i3],dist_B3[j3]) and biases[k] in ('uni', 'pes'):
+                                                        kapa[biases[i] + '_' + biases[j] + '_' + biases[k]][1] += (min(dist_A1[i1 + 1],dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (min(dist_A2[i2 + 1],dist_B2[j2 + 1]) - max(dist_A2[i2], dist_B2[j2])) * (min(dist_A3[i3 + 1],dist_B3[j3 + 1]) - max(dist_A3[i3], dist_B3[j3])) * logistic(B,BEVb - BEVa + (val_B1[j1] + val_B2[j2] +val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
 
                 elif Corr == 0:
-                    if k1 in ('unb', 'sig'):
-                        kapa[k1][1] += (dist_A1[i1 + 1] - dist_A1[i1]) * (dist_B1[j1 + 1] - dist_B1[j1]) * logistic(B,BEVb - BEVa +val_B1[j1] -val_A1[i1])
-                        for k2 in ['unb', 'uni', 'pes', 'sig']:
-                            val_A2, dist_A2, val_B2, dist_B2 = val_dist[k2][0], val_dist[k2][1], val_dist[k2][2],val_dist[k2][3]
+                    if biases[i] in ('unb', 'sig'):
+                        kapa[biases[i]][1] += (dist_A1[i1 + 1] - dist_A1[i1]) * (dist_B1[j1 + 1] - dist_B1[j1]) * logistic(B,BEVb - BEVa +val_B1[j1] -val_A1[i1])
+                        for j in range(i,4):
+                            val_A2, dist_A2, val_B2, dist_B2 = val_dist[biases[j]][0], val_dist[biases[j]][1], val_dist[biases[j]][2],val_dist[biases[j]][3]
                             for i2 in range(val_A2.shape[0]):
                                 for j2 in range(val_B2.shape[0]):
-                                    if k2 in ('unb', 'sig'):
-                                        kapa[k1 + '_' + k2][1] += (dist_A1[i1 + 1] - dist_A1[i1]) * (dist_B1[j1 + 1] - dist_B1[j1]) * (dist_A2[i2 + 1] - dist_A2[i2]) * (dist_B2[j2 + 1] - dist_B2[j2]) * logistic(B,BEVb - BEVa + (val_B1[j1] + val_B2[j2]) / 2 - (val_A1[i1] + val_A2[i2]) / 2)
-                                        for k3 in ['unb', 'uni', 'pes', 'sig']:
-                                            val_A3, dist_A3, val_B3, dist_B3 = val_dist[k3][0], val_dist[k3][1],val_dist[k3][2], val_dist[k3][3]
+                                    if biases[j] in ('unb', 'sig'):
+                                        kapa[biases[i] + '_' + biases[j]][1] += (dist_A1[i1 + 1] - dist_A1[i1]) * (dist_B1[j1 + 1] - dist_B1[j1]) * (dist_A2[i2 + 1] - dist_A2[i2]) * (dist_B2[j2 + 1] - dist_B2[j2]) * logistic(B,BEVb - BEVa + (val_B1[j1] + val_B2[j2]) / 2 - (val_A1[i1] + val_A2[i2]) / 2)
+                                        for k in range(j,4):
+                                            val_A3, dist_A3, val_B3, dist_B3 = val_dist[biases[k]][0], val_dist[biases[k]][1],val_dist[biases[k]][2], val_dist[biases[k]][3]
                                             for i3 in range(val_A3.shape[0]):
                                                 for j3 in range(val_B3.shape[0]):
-                                                    if k3 in ('unb', 'sig'):
-                                                        kapa[k1 + '_' + k2 + '_' + k3][1] += (dist_A1[i1 + 1] - dist_A1[i1]) * (dist_B1[j1 + 1] -dist_B1[j1]) * (dist_A2[i2 + 1] -dist_A2[i2]) * (dist_B2[j2 + 1] - dist_B2[j2]) * (dist_A3[i3 + 1] - dist_A3[i3]) * (dist_B3[j3 + 1] -dist_B3[j3]) * logistic(B, BEVb - BEVa + (val_B1[j1] + val_B2[j2] + val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
-                                                    elif min(dist_A3[i3 + 1], dist_B3[j3 + 1]) > max(dist_A3[i3],dist_B3[j3]) and k3 in ('uni', 'pes'):
-                                                        kapa[k1 + '_' + k2 + '_' + k3][1] += (dist_A1[i1 + 1] - dist_A1[i1]) * (dist_B1[j1 + 1] -dist_B1[j1]) * (dist_A2[i2 + 1] -dist_A2[i2]) * (dist_B2[j2 + 1] -dist_B2[j2]) * (min(dist_A3[i3 + 1],dist_B3[j3 + 1]) - max(dist_A3[i3],dist_B3[j3])) * logistic(B, BEVb - BEVa + (val_B1[j1] + val_B2[j2] + val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
-                                    elif min(dist_A2[i2 + 1], dist_B2[j2 + 1]) > max(dist_A2[i2], dist_B2[j2]) and k2 in ('uni', 'pes'):
-                                        kapa[k1 + '_' + k2][1] += (dist_A1[i1 + 1] - dist_A1[i1]) * (dist_B1[j1 + 1] - dist_B1[j1]) * (min(dist_A2[i2 + 1],dist_B2[j2 + 1]) - max(dist_A2[i2], dist_B2[j2])) * logistic(B,BEVb - BEVa + (val_B1[j1] +val_B2[j2]) / 2 - (val_A1[i1] +val_A2[i2]) / 2)
-                                        for k3 in ['unb', 'uni', 'pes', 'sig']:
-                                            val_A3, dist_A3, val_B3, dist_B3 = val_dist[k3][0], val_dist[k3][1],val_dist[k3][2], val_dist[k3][3]
+                                                    if biases[k] in ('unb', 'sig'):
+                                                        kapa[biases[i] + '_' + biases[j] + '_' + biases[k]][1] += (dist_A1[i1 + 1] - dist_A1[i1]) * (dist_B1[j1 + 1] -dist_B1[j1]) * (dist_A2[i2 + 1] -dist_A2[i2]) * (dist_B2[j2 + 1] - dist_B2[j2]) * (dist_A3[i3 + 1] - dist_A3[i3]) * (dist_B3[j3 + 1] -dist_B3[j3]) * logistic(B, BEVb - BEVa + (val_B1[j1] + val_B2[j2] + val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
+                                                    elif min(dist_A3[i3 + 1], dist_B3[j3 + 1]) > max(dist_A3[i3],dist_B3[j3]) and biases[k] in ('uni', 'pes'):
+                                                        kapa[biases[i] + '_' + biases[j] + '_' + biases[k]][1] += (dist_A1[i1 + 1] - dist_A1[i1]) * (dist_B1[j1 + 1] -dist_B1[j1]) * (dist_A2[i2 + 1] -dist_A2[i2]) * (dist_B2[j2 + 1] -dist_B2[j2]) * (min(dist_A3[i3 + 1],dist_B3[j3 + 1]) - max(dist_A3[i3],dist_B3[j3])) * logistic(B, BEVb - BEVa + (val_B1[j1] + val_B2[j2] + val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
+                                    elif min(dist_A2[i2 + 1], dist_B2[j2 + 1]) > max(dist_A2[i2], dist_B2[j2]) and biases[j] in ('uni', 'pes'):
+                                        kapa[biases[i] + '_' + biases[j]][1] += (dist_A1[i1 + 1] - dist_A1[i1]) * (dist_B1[j1 + 1] - dist_B1[j1]) * (min(dist_A2[i2 + 1],dist_B2[j2 + 1]) - max(dist_A2[i2], dist_B2[j2])) * logistic(B,BEVb - BEVa + (val_B1[j1] +val_B2[j2]) / 2 - (val_A1[i1] +val_A2[i2]) / 2)
+                                        for k in range(j,4):
+                                            val_A3, dist_A3, val_B3, dist_B3 = val_dist[biases[k]][0], val_dist[biases[k]][1],val_dist[biases[k]][2], val_dist[biases[k]][3]
                                             for i3 in range(val_A3.shape[0]):
                                                 for j3 in range(val_B3.shape[0]):
-                                                    if k3 in ('unb', 'sig'):
-                                                        kapa[k1 + '_' + k2 + '_' + k3][1] += (dist_A1[i1 + 1] - dist_A1[i1]) * (dist_B1[j1 + 1] -dist_B1[j1]) * (min(dist_A2[i2 + 1],dist_B2[j2 + 1]) - max(dist_A2[i2],dist_B2[j2])) * (dist_A3[i3 + 1] -dist_A3[i3]) * (dist_B3[j3 + 1] -dist_B3[j3]) * logistic(B, BEVb - BEVa + (val_B1[j1] + val_B2[j2] + val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
-                                                    elif min(dist_A3[i3 + 1], dist_B3[j3 + 1]) > max(dist_A3[i3],dist_B3[j3]) and k3 in ('uni', 'pes'):
-                                                        kapa[k1 + '_' + k2 + '_' + k3][1] += (dist_A1[i1 + 1] - dist_A1[i1]) * (dist_B1[j1 + 1] -dist_B1[j1]) * (min(dist_A2[i2 + 1],dist_B2[j2 + 1]) - max(dist_A2[i2], dist_B2[j2])) * (min(dist_A3[i3 + 1], dist_B3[j3 + 1]) - max(dist_A3[i3],dist_B3[j3])) * logistic(B, BEVb - BEVa + (val_B1[j1] + val_B2[j2] + val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
-                    elif min(dist_A1[i1 + 1], dist_B1[j1 + 1]) > max(dist_A1[i1], dist_B1[j1]) and k1 in ('uni', 'pes'):
-                        kapa[k1][1] += (min(dist_A1[i1 + 1], dist_B1[j1 + 1]) - max(dist_A1[i1],dist_B1[j1])) * logistic(B,BEVb - BEVa +val_B1[j1] -val_A1[i1])
-                        for k2 in ['unb', 'uni', 'pes', 'sig']:
-                            val_A2, dist_A2, val_B2, dist_B2 = val_dist[k2][0], val_dist[k2][1], val_dist[k2][2],val_dist[k2][3]
+                                                    if biases[k] in ('unb', 'sig'):
+                                                        kapa[biases[i] + '_' + biases[j] + '_' + biases[k]][1] += (dist_A1[i1 + 1] - dist_A1[i1]) * (dist_B1[j1 + 1] -dist_B1[j1]) * (min(dist_A2[i2 + 1],dist_B2[j2 + 1]) - max(dist_A2[i2],dist_B2[j2])) * (dist_A3[i3 + 1] -dist_A3[i3]) * (dist_B3[j3 + 1] -dist_B3[j3]) * logistic(B, BEVb - BEVa + (val_B1[j1] + val_B2[j2] + val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
+                                                    elif min(dist_A3[i3 + 1], dist_B3[j3 + 1]) > max(dist_A3[i3],dist_B3[j3]) and biases[k] in ('uni', 'pes'):
+                                                        kapa[biases[i] + '_' + biases[j] + '_' + biases[k]][1] += (dist_A1[i1 + 1] - dist_A1[i1]) * (dist_B1[j1 + 1] -dist_B1[j1]) * (min(dist_A2[i2 + 1],dist_B2[j2 + 1]) - max(dist_A2[i2], dist_B2[j2])) * (min(dist_A3[i3 + 1], dist_B3[j3 + 1]) - max(dist_A3[i3],dist_B3[j3])) * logistic(B, BEVb - BEVa + (val_B1[j1] + val_B2[j2] + val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
+                    elif min(dist_A1[i1 + 1], dist_B1[j1 + 1]) > max(dist_A1[i1], dist_B1[j1]) and biases[i] in ('uni', 'pes'):
+                        kapa[biases[i]][1] += (min(dist_A1[i1 + 1], dist_B1[j1 + 1]) - max(dist_A1[i1],dist_B1[j1])) * logistic(B,BEVb - BEVa +val_B1[j1] -val_A1[i1])
+                        for j in range(i,4):
+                            val_A2, dist_A2, val_B2, dist_B2 = val_dist[biases[j]][0], val_dist[biases[j]][1], val_dist[biases[j]][2],val_dist[biases[j]][3]
                             for i2 in range(val_A2.shape[0]):
                                 for j2 in range(val_B2.shape[0]):
-                                    if k2 in ('unb', 'sig'):
-                                        kapa[k1 + '_' + k2][1] += (min(dist_A1[i1 + 1], dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (dist_A2[i2 + 1] - dist_A2[i2]) * (dist_B2[j2 + 1] - dist_B2[j2]) * logistic(B,BEVb - BEVa + (val_B1[j1] +val_B2[j2]) / 2 - (val_A1[i1] +val_A2[i2]) / 2)
-                                        for k3 in ['unb', 'uni', 'pes', 'sig']:
-                                            val_A3, dist_A3, val_B3, dist_B3 = val_dist[k3][0], val_dist[k3][1],val_dist[k3][2], val_dist[k3][3]
+                                    if biases[j] in ('unb', 'sig'):
+                                        kapa[biases[i] + '_' + biases[j]][1] += (min(dist_A1[i1 + 1], dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (dist_A2[i2 + 1] - dist_A2[i2]) * (dist_B2[j2 + 1] - dist_B2[j2]) * logistic(B,BEVb - BEVa + (val_B1[j1] +val_B2[j2]) / 2 - (val_A1[i1] +val_A2[i2]) / 2)
+                                        for k in range(j,4):
+                                            val_A3, dist_A3, val_B3, dist_B3 = val_dist[biases[k]][0], val_dist[biases[k]][1],val_dist[biases[k]][2], val_dist[biases[k]][3]
                                             for i3 in range(val_A3.shape[0]):
                                                 for j3 in range(val_B3.shape[0]):
-                                                    if k3 in ('unb', 'sig'):
-                                                        kapa[k1 + '_' + k2 + '_' + k3][1] += (min(dist_A1[i1 + 1],dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (dist_A2[i2 + 1] - dist_A2[i2]) * (dist_B2[j2 + 1] - dist_B2[j2]) * (dist_A3[i3 + 1] -dist_A3[i3]) * (dist_B3[j3 + 1] -dist_B3[j3]) * logistic(B, BEVb - BEVa + (val_B1[j1] + val_B2[j2] + val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
-                                                    elif min(dist_A3[i3 + 1], dist_B3[j3 + 1]) > max(dist_A3[i3],dist_B3[j3]) and k3 in ('uni', 'pes'):
-                                                        kapa[k1 + '_' + k2 + '_' + k3][1] += (min(dist_A1[i1 + 1],dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (dist_A2[i2 + 1] - dist_A2[i2]) * (dist_B2[j2 + 1] - dist_B2[j2]) * (min(dist_A3[i3 + 1], dist_B3[j3 + 1]) - max(dist_A3[i3],dist_B3[j3])) * logistic(B, BEVb - BEVa + (val_B1[j1] + val_B2[j2] + val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
-                                    elif min(dist_A2[i2 + 1], dist_B2[j2 + 1]) > max(dist_A2[i2], dist_B2[j2]) and k2 in ('uni', 'pes'):
-                                        kapa[k1 + '_' + k2][1] += (min(dist_A1[i1 + 1], dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (min(dist_A2[i2 + 1], dist_B2[j2 + 1]) - max(dist_A2[i2], dist_B2[j2])) * logistic(B,BEVb - BEVa + (val_B1[j1] +val_B2[j2]) / 2 - (val_A1[i1] +val_A2[i2]) / 2)
-                                        for k3 in ['unb', 'uni', 'pes', 'sig']:
-                                            val_A3, dist_A3, val_B3, dist_B3 = val_dist[k3][0], val_dist[k3][1],val_dist[k3][2], val_dist[k3][3]
+                                                    if biases[k] in ('unb', 'sig'):
+                                                        kapa[biases[i] + '_' + biases[j] + '_' + biases[k]][1] += (min(dist_A1[i1 + 1],dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (dist_A2[i2 + 1] - dist_A2[i2]) * (dist_B2[j2 + 1] - dist_B2[j2]) * (dist_A3[i3 + 1] -dist_A3[i3]) * (dist_B3[j3 + 1] -dist_B3[j3]) * logistic(B, BEVb - BEVa + (val_B1[j1] + val_B2[j2] + val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
+                                                    elif min(dist_A3[i3 + 1], dist_B3[j3 + 1]) > max(dist_A3[i3],dist_B3[j3]) and biases[k] in ('uni', 'pes'):
+                                                        kapa[biases[i] + '_' + biases[j] + '_' + biases[k]][1] += (min(dist_A1[i1 + 1],dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (dist_A2[i2 + 1] - dist_A2[i2]) * (dist_B2[j2 + 1] - dist_B2[j2]) * (min(dist_A3[i3 + 1], dist_B3[j3 + 1]) - max(dist_A3[i3],dist_B3[j3])) * logistic(B, BEVb - BEVa + (val_B1[j1] + val_B2[j2] + val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
+                                    elif min(dist_A2[i2 + 1], dist_B2[j2 + 1]) > max(dist_A2[i2], dist_B2[j2]) and biases[j] in ('uni', 'pes'):
+                                        kapa[biases[i] + '_' + biases[j]][1] += (min(dist_A1[i1 + 1], dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (min(dist_A2[i2 + 1], dist_B2[j2 + 1]) - max(dist_A2[i2], dist_B2[j2])) * logistic(B,BEVb - BEVa + (val_B1[j1] +val_B2[j2]) / 2 - (val_A1[i1] +val_A2[i2]) / 2)
+                                        for k in range(j,4):
+                                            val_A3, dist_A3, val_B3, dist_B3 = val_dist[biases[k]][0], val_dist[biases[k]][1],val_dist[biases[k]][2], val_dist[biases[k]][3]
                                             for i3 in range(val_A3.shape[0]):
                                                 for j3 in range(val_B3.shape[0]):
-                                                    if k3 in ('unb', 'sig'):
-                                                        kapa[k1 + '_' + k2 + '_' + k3][1] += (min(dist_A1[i1 + 1],dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (min(dist_A2[i2 + 1],dist_B2[j2 + 1]) - max(dist_A2[i2], dist_B2[j2])) * (dist_A3[i3 + 1] - dist_A3[i3]) * (dist_B3[j3 + 1] - dist_B3[j3]) * logistic(B,BEVb - BEVa + (val_B1[j1] +val_B2[j2] +val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
-                                                    elif min(dist_A3[i3 + 1], dist_B3[j3 + 1]) > max(dist_A3[i3],dist_B3[j3]) and k3 in ('uni', 'pes'):
-                                                        kapa[k1 + '_' + k2 + '_' + k3][1] += (min(dist_A1[i1 + 1],dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (min(dist_A2[i2 + 1],dist_B2[j2 + 1]) - max(dist_A2[i2], dist_B2[j2])) * (min(dist_A3[i3 + 1],dist_B3[j3 + 1]) - max(dist_A3[i3], dist_B3[j3])) * logistic(B, BEVb - BEVa + (val_B1[j1] + val_B2[j2] + val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
-
+                                                    if biases[k] in ('unb', 'sig'):
+                                                        kapa[biases[i] + '_' + biases[j] + '_' + biases[k]][1] += (min(dist_A1[i1 + 1],dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (min(dist_A2[i2 + 1],dist_B2[j2 + 1]) - max(dist_A2[i2], dist_B2[j2])) * (dist_A3[i3 + 1] - dist_A3[i3]) * (dist_B3[j3 + 1] - dist_B3[j3]) * logistic(B,BEVb - BEVa + (val_B1[j1] +val_B2[j2] +val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
+                                                    elif min(dist_A3[i3 + 1], dist_B3[j3 + 1]) > max(dist_A3[i3],dist_B3[j3]) and biases[k] in ('uni', 'pes'):
+                                                        kapa[biases[i] + '_' + biases[j] + '_' + biases[k]][1] += (min(dist_A1[i1 + 1],dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (min(dist_A2[i2 + 1],dist_B2[j2 + 1]) - max(dist_A2[i2], dist_B2[j2])) * (min(dist_A3[i3 + 1],dist_B3[j3 + 1]) - max(dist_A3[i3], dist_B3[j3])) * logistic(B, BEVb - BEVa + (val_B1[j1] + val_B2[j2] + val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
     for k1 in ['unb', 'uni', 'pes', 'sig']:
-        probs0[k1].append(kapa[k1][0] / 3)
+        probs0[k1].append(np.array(kapa[k1][0]) / 3)
         for k2 in ['unb', 'uni', 'pes', 'sig']:
-            probs0[k1 + '_' + k2].append(kapa[k1 + '_' + k2][0] / 3)
+            probs0[k1 + '_' + k2].append(np.array(kapa[k1 + '_' + k2][0]) / 3)
+            probs0[k2 + '_' + k1].append(np.array(kapa[k1 + '_' + k2][0]) / 3)
             for k3 in ['unb', 'uni', 'pes', 'sig']:
-                probs0[k1 + '_' + k2 + '_' + k3].append(kapa[k1 + '_' + k2 + '_' + k3][0] / 3)
+                probs0[k1 + '_' + k2 + '_' + k3].append(np.array(kapa[k1 + '_' + k2 + '_' + k3][0]) / 3)
+                probs0[k1 + '_' + k3 + '_' + k2].append(np.array(kapa[k1 + '_' + k2 + '_' + k3][0]) / 3)
+                probs0[k2 + '_' + k1 + '_' + k3].append(np.array(kapa[k1 + '_' + k2 + '_' + k3][0]) / 3)
+                probs0[k2 + '_' + k3 + '_' + k1].append(np.array(kapa[k1 + '_' + k2 + '_' + k3][0]) / 3)
+                probs0[k3 + '_' + k1 + '_' + k2].append(np.array(kapa[k1 + '_' + k2 + '_' + k3][0]) / 3)
+                probs0[k3 + '_' + k2 + '_' + k1].append(np.array(kapa[k1 + '_' + k2 + '_' + k3][0]) / 3)
     if Corr == 1:
         for k1 in ['unb', 'uni', 'pes', 'sig']:
-            probs[k1].append(kapa[k1][0] / 3)
+            probs[k1].append(np.array(kapa[k1][0]) / 3)
             for k2 in ['unb', 'uni', 'pes', 'sig']:
-                probs[k1 + '_' + k2].append(kapa[k1 + '_' + k2][0] / 3)
+                probs[k1 + '_' + k2].append(np.array(kapa[k1 + '_' + k2][0]) / 3)
+                probs[k2 + '_' + k1].append(np.array(kapa[k1 + '_' + k2][0]) / 3)
                 for k3 in ['unb', 'uni', 'pes', 'sig']:
-                    probs[k1 + '_' + k2 + '_' + k3].append(kapa[k1 + '_' + k2 + '_' + k3][0] / 3)
+                    probs[k1 + '_' + k2 + '_' + k3].append(np.array(kapa[k1 + '_' + k2 + '_' + k3][0]) / 3)
+                    probs[k1 + '_' + k3 + '_' + k2].append(np.array(kapa[k1 + '_' + k2 + '_' + k3][0]) / 3)
+                    probs[k2 + '_' + k1 + '_' + k3].append(np.array(kapa[k1 + '_' + k2 + '_' + k3][0]) / 3)
+                    probs[k2 + '_' + k3 + '_' + k1].append(np.array(kapa[k1 + '_' + k2 + '_' + k3][0]) / 3)
+                    probs[k3 + '_' + k1 + '_' + k2].append(np.array(kapa[k1 + '_' + k2 + '_' + k3][0]) / 3)
+                    probs[k3 + '_' + k2 + '_' + k1].append(np.array(kapa[k1 + '_' + k2 + '_' + k3][0]) / 3)
     else:
         for k1 in ['unb', 'uni', 'pes', 'sig']:
-            probs[k1].append(kapa[k1][1] / 3)
+            probs[k1].append(np.array(kapa[k1][1]) / 3)
             for k2 in ['unb', 'uni', 'pes', 'sig']:
-                probs[k1 + '_' + k2].append(kapa[k1 + '_' + k2][1] / 3)
+                probs[k1 + '_' + k2].append(np.array(kapa[k1 + '_' + k2][1]) / 3)
+                probs[k2 + '_' + k1].append(np.array(kapa[k1 + '_' + k2][1]) / 3)
                 for k3 in ['unb', 'uni', 'pes', 'sig']:
-                    probs[k1 + '_' + k2 + '_' + k3].append(kapa[k1 + '_' + k2 + '_' + k3][1] / 3)
+                    probs[k1 + '_' + k2 + '_' + k3].append(np.array(kapa[k1 + '_' + k2 + '_' + k3][1]) / 3)
+                    probs[k1 + '_' + k3 + '_' + k2].append(np.array(kapa[k1 + '_' + k2 + '_' + k3][1]) / 3)
+                    probs[k2 + '_' + k1 + '_' + k3].append(np.array(kapa[k1 + '_' + k2 + '_' + k3][1]) / 3)
+                    probs[k2 + '_' + k3 + '_' + k1].append(np.array(kapa[k1 + '_' + k2 + '_' + k3][1]) / 3)
+                    probs[k3 + '_' + k1 + '_' + k2].append(np.array(kapa[k1 + '_' + k2 + '_' + k3][1]) / 3)
+                    probs[k3 + '_' + k2 + '_' + k1].append(np.array(kapa[k1 + '_' + k2 + '_' + k3][1]) / 3)
     return probs,probs0
 
 
 def sigmoid_weights(val_dist, Corr, probs, differences, probs0, differences0):
+    biases = ['unb', 'uni', 'pes', 'sig']
     kapa, st_difference = {}, {}
-    for k1 in ['unb', 'uni', 'pes', 'sig']:
-        kapa[k1] = [],[]
-        st_difference[k1] = [],[]
-        for k2 in ['unb', 'uni', 'pes', 'sig']:
-            kapa[k1 + '_' + k2] = [],[]
-            st_difference[k1 + '_' + k2] = [],[]
-            for k3 in ['unb', 'uni', 'pes', 'sig']:
-                kapa[k1 + '_' + k2 + '_' + k3] = [],[]
-                st_difference[k1 + '_' + k2 + '_' + k3] = [],[]
-    for k1 in ['unb', 'uni', 'pes', 'sig']:
-        val_A1, dist_A1, val_B1, dist_B1 = val_dist[k1][0], val_dist[k1][1], val_dist[k1][2], val_dist[k1][3]
+    for i in range(0,4):
+        kapa[biases[i]] = [],[]
+        st_difference[biases[i]] = [],[]
+        for j in range(i,4):
+            kapa[biases[i] + '_' + biases[j]] = [],[]
+            st_difference[biases[i] + '_' + biases[j]] = [],[]
+            for k in range(j,4):
+                kapa[biases[i] + '_' + biases[j] + '_' + biases[k]] = [],[]
+                st_difference[biases[i] + '_' + biases[j] + '_' + biases[k]] = [],[]
+    for i in range(0,4):
+        val_A1, dist_A1, val_B1, dist_B1 = val_dist[biases[i]][0], val_dist[biases[i]][1], val_dist[biases[i]][2], val_dist[biases[i]][3]
         for i1 in range(val_A1.shape[0]):
             for j1 in range(val_B1.shape[0]):
                 if min(dist_A1[i1 + 1], dist_B1[j1 + 1]) > max(dist_A1[i1], dist_B1[j1]):
-                    kapa[k1][0].append(min(dist_A1[i1 + 1], dist_B1[j1 + 1]) - max(dist_A1[i1],dist_B1[j1]))
-                    st_difference[k1][0].append(val_B1[j1] -val_A1[i1])
-                    for k2 in ['unb', 'uni', 'pes', 'sig']:
-                        val_A2, dist_A2, val_B2, dist_B2 = val_dist[k2][0], val_dist[k2][1], val_dist[k2][2],val_dist[k2][3]
+                    kapa[biases[i]][0].append(min(dist_A1[i1 + 1], dist_B1[j1 + 1]) - max(dist_A1[i1],dist_B1[j1]))
+                    st_difference[biases[i]][0].append(val_B1[j1] -val_A1[i1])
+                    for j in range(i,4):
+                        val_A2, dist_A2, val_B2, dist_B2 = val_dist[biases[j]][0], val_dist[biases[j]][1], val_dist[biases[j]][2],val_dist[biases[j]][3]
                         for i2 in range(val_A2.shape[0]):
                             for j2 in range(val_B2.shape[0]):
                                 if min(dist_A2[i2 + 1], dist_B2[j2 + 1]) > max(dist_A2[i2], dist_B2[j2]):
-                                    kapa[k1 + '_' + k2][0].append((min(dist_A1[i1 + 1], dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (min(dist_A2[i2 + 1], dist_B2[j2 + 1]) - max(dist_A2[i2], dist_B2[j2])))
-                                    st_difference[k1 + '_' + k2][0].append((val_B1[j1] + val_B2[j2]) / 2 - (val_A1[i1] + val_A2[i2]) / 2)
-                                    for k3 in ['unb', 'uni', 'pes', 'sig']:
-                                        val_A3, dist_A3, val_B3, dist_B3 = val_dist[k3][0], val_dist[k3][1],val_dist[k3][2], val_dist[k3][3]
+                                    kapa[biases[i] + '_' + biases[j]][0].append((min(dist_A1[i1 + 1], dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (min(dist_A2[i2 + 1], dist_B2[j2 + 1]) - max(dist_A2[i2], dist_B2[j2])))
+                                    st_difference[biases[i] + '_' + biases[j]][0].append((val_B1[j1] + val_B2[j2]) / 2 - (val_A1[i1] + val_A2[i2]) / 2)
+                                    for k in range(j,4):
+                                        val_A3, dist_A3, val_B3, dist_B3 = val_dist[biases[k]][0], val_dist[biases[k]][1],val_dist[biases[k]][2], val_dist[biases[k]][3]
                                         for i3 in range(val_A3.shape[0]):
                                             for j3 in range(val_B3.shape[0]):
                                                 if min(dist_A3[i3 + 1], dist_B3[j3 + 1]) > max(dist_A3[i3],dist_B3[j3]):
-                                                    kapa[k1 + '_' + k2 + '_' + k3][0].append((min(dist_A1[i1 + 1],dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (min(dist_A2[i2 + 1],dist_B2[j2 + 1]) - max(dist_A2[i2], dist_B2[j2])) * (min(dist_A3[i3 + 1],dist_B3[j3 + 1]) - max(dist_A3[i3], dist_B3[j3])))
-                                                    st_difference[k1 + '_' + k2 + '_' + k3][0].append((val_B1[j1] + val_B2[j2] + val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
+                                                    kapa[biases[i] + '_' + biases[j] + '_' + biases[k]][0].append((min(dist_A1[i1 + 1],dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (min(dist_A2[i2 + 1],dist_B2[j2 + 1]) - max(dist_A2[i2], dist_B2[j2])) * (min(dist_A3[i3 + 1],dist_B3[j3 + 1]) - max(dist_A3[i3], dist_B3[j3])))
+                                                    st_difference[biases[i] + '_' + biases[j] + '_' + biases[k]][0].append((val_B1[j1] + val_B2[j2] + val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
                 if Corr == -1:
-                    if min(dist_A1[i1 + 1], 1 - dist_B1[j1]) > max(dist_A1[i1], 1 - dist_B1[j1 + 1]) and k1 in ('unb', 'sig'):
-                        kapa[k1][1].append(min(dist_A1[i1 + 1], 1 - dist_B1[j1]) - max(dist_A1[i1],1 - dist_B1[j1 + 1]))
-                        st_difference[k1][1].append(val_B1[j1] -val_A1[i1])
-                        for k2 in ['unb', 'uni', 'pes', 'sig']:
-                            val_A2, dist_A2, val_B2, dist_B2 = val_dist[k2][0], val_dist[k2][1], val_dist[k2][2],val_dist[k2][3]
+                    if min(dist_A1[i1 + 1], 1 - dist_B1[j1]) > max(dist_A1[i1], 1 - dist_B1[j1 + 1]) and biases[i] in ('unb', 'sig'):
+                        kapa[biases[i]][1].append(min(dist_A1[i1 + 1], 1 - dist_B1[j1]) - max(dist_A1[i1],1 - dist_B1[j1 + 1]))
+                        st_difference[biases[i]][1].append(val_B1[j1] -val_A1[i1])
+                        for j in range(i,4):
+                            val_A2, dist_A2, val_B2, dist_B2 = val_dist[biases[j]][0], val_dist[biases[j]][1], val_dist[biases[j]][2],val_dist[biases[j]][3]
                             for i2 in range(val_A2.shape[0]):
                                 for j2 in range(val_B2.shape[0]):
-                                    if min(dist_A2[i2 + 1], 1 - dist_B2[j2]) > max(dist_A2[i2],1 - dist_B2[j2 + 1]) and k2 in ('unb', 'sig'):
-                                        kapa[k1 + '_' + k2][1].append((min(dist_A1[i1 + 1], 1 - dist_B1[j1]) - max(dist_A1[i1], 1 - dist_B1[j1 + 1])) * (min(dist_A2[i2 + 1],1 - dist_B2[j2]) - max(dist_A2[i2], 1 - dist_B2[j2 + 1])))
-                                        st_difference[k1 + '_' + k2][1].append((val_B1[j1] + val_B2[j2]) / 2 - (val_A1[i1] + val_A2[i2]) / 2)
-                                        for k3 in ['unb', 'uni', 'pes', 'sig']:
-                                            val_A3, dist_A3, val_B3, dist_B3 = val_dist[k3][0], val_dist[k3][1],val_dist[k3][2], val_dist[k3][3]
+                                    if min(dist_A2[i2 + 1], 1 - dist_B2[j2]) > max(dist_A2[i2],1 - dist_B2[j2 + 1]) and biases[j] in ('unb', 'sig'):
+                                        kapa[biases[i] + '_' + biases[j]][1].append((min(dist_A1[i1 + 1], 1 - dist_B1[j1]) - max(dist_A1[i1], 1 - dist_B1[j1 + 1])) * (min(dist_A2[i2 + 1],1 - dist_B2[j2]) - max(dist_A2[i2], 1 - dist_B2[j2 + 1])))
+                                        st_difference[biases[i] + '_' + biases[j]][1].append((val_B1[j1] + val_B2[j2]) / 2 - (val_A1[i1] + val_A2[i2]) / 2)
+                                        for k in range(j,4):
+                                            val_A3, dist_A3, val_B3, dist_B3 = val_dist[biases[k]][0], val_dist[biases[k]][1],val_dist[biases[k]][2], val_dist[biases[k]][3]
                                             for i3 in range(val_A3.shape[0]):
                                                 for j3 in range(val_B3.shape[0]):
-                                                    if min(dist_A3[i3 + 1], 1 - dist_B3[j3]) > max(dist_A3[i3],1 - dist_B3[j3 + 1]) and k3 in ('unb', 'sig'):
-                                                        kapa[k1 + '_' + k2 + '_' + k3][1].append((min(dist_A1[i1 + 1],1 - dist_B1[j1]) - max(dist_A1[i1], 1 - dist_B1[j1 + 1])) * (min(dist_A2[i2 + 1], 1 - dist_B2[j2]) - max(dist_A2[i2], 1 - dist_B2[j2 + 1])) * (min(dist_A3[i3 + 1],1 - dist_B3[j3]) - max(dist_A3[i3], 1 - dist_B3[j3 + 1])))
-                                                        st_difference[k1 + '_' + k2 + '_' + k3][1].append((val_B1[j1] +val_B2[j2] +val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
-                                                    elif min(dist_A3[i3 + 1], dist_B3[j3 + 1]) > max(dist_A3[i3],dist_B3[j3]) and k3 in ('uni', 'pes'):
-                                                        kapa[k1 + '_' + k2 + '_' + k3][1].append((min(dist_A1[i1 + 1],1 - dist_B1[j1]) - max(dist_A1[i1], 1 - dist_B1[j1 + 1])) * (min(dist_A2[i2 + 1],1 - dist_B2[j2]) - max(dist_A2[i2], 1 - dist_B2[j2 + 1])) * (min(dist_A3[i3 + 1], dist_B3[j3 + 1]) - max(dist_A3[i3],dist_B3[j3])))
-                                                        st_difference[k1 + '_' + k2 + '_' + k3][1].append((val_B1[j1] +val_B2[j2] +val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
-                                    elif min(dist_A2[i2 + 1], dist_B2[j2 + 1]) > max(dist_A2[i2], dist_B2[j2]) and k2 in ('uni', 'pes'):
-                                        kapa[k1 + '_' + k2][1].append((min(dist_A1[i1 + 1], 1 - dist_B1[j1]) - max(dist_A1[i1], 1 - dist_B1[j1 + 1])) * (min(dist_A2[i2 + 1],dist_B2[j2 + 1]) - max(dist_A2[i2], dist_B2[j2])))
-                                        st_difference[k1 + '_' + k2][1].append((val_B1[j1] + val_B2[j2]) / 2 - (val_A1[i1] + val_A2[i2]) / 2)
-                                        for k3 in ['unb', 'uni', 'pes', 'sig']:
-                                            val_A3, dist_A3, val_B3, dist_B3 = val_dist[k3][0], val_dist[k3][1],val_dist[k3][2], val_dist[k3][3]
+                                                    if min(dist_A3[i3 + 1], 1 - dist_B3[j3]) > max(dist_A3[i3],1 - dist_B3[j3 + 1]) and biases[k] in ('unb', 'sig'):
+                                                        kapa[biases[i] + '_' + biases[j] + '_' + biases[k]][1].append((min(dist_A1[i1 + 1],1 - dist_B1[j1]) - max(dist_A1[i1], 1 - dist_B1[j1 + 1])) * (min(dist_A2[i2 + 1], 1 - dist_B2[j2]) - max(dist_A2[i2], 1 - dist_B2[j2 + 1])) * (min(dist_A3[i3 + 1],1 - dist_B3[j3]) - max(dist_A3[i3], 1 - dist_B3[j3 + 1])))
+                                                        st_difference[biases[i] + '_' + biases[j] + '_' + biases[k]][1].append((val_B1[j1] +val_B2[j2] +val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
+                                                    elif min(dist_A3[i3 + 1], dist_B3[j3 + 1]) > max(dist_A3[i3],dist_B3[j3]) and biases[k] in ('uni', 'pes'):
+                                                        kapa[biases[i] + '_' + biases[j] + '_' + biases[k]][1].append((min(dist_A1[i1 + 1],1 - dist_B1[j1]) - max(dist_A1[i1], 1 - dist_B1[j1 + 1])) * (min(dist_A2[i2 + 1],1 - dist_B2[j2]) - max(dist_A2[i2], 1 - dist_B2[j2 + 1])) * (min(dist_A3[i3 + 1], dist_B3[j3 + 1]) - max(dist_A3[i3],dist_B3[j3])))
+                                                        st_difference[biases[i] + '_' + biases[j] + '_' + biases[k]][1].append((val_B1[j1] +val_B2[j2] +val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
+                                    elif min(dist_A2[i2 + 1], dist_B2[j2 + 1]) > max(dist_A2[i2], dist_B2[j2]) and biases[j] in ('uni', 'pes'):
+                                        kapa[biases[i] + '_' + biases[j]][1].append((min(dist_A1[i1 + 1], 1 - dist_B1[j1]) - max(dist_A1[i1], 1 - dist_B1[j1 + 1])) * (min(dist_A2[i2 + 1],dist_B2[j2 + 1]) - max(dist_A2[i2], dist_B2[j2])))
+                                        st_difference[biases[i] + '_' + biases[j]][1].append((val_B1[j1] + val_B2[j2]) / 2 - (val_A1[i1] + val_A2[i2]) / 2)
+                                        for k in range(j,4):
+                                            val_A3, dist_A3, val_B3, dist_B3 = val_dist[biases[k]][0], val_dist[biases[k]][1],val_dist[biases[k]][2], val_dist[biases[k]][3]
                                             for i3 in range(val_A3.shape[0]):
                                                 for j3 in range(val_B3.shape[0]):
-                                                    if min(dist_A3[i3 + 1], 1 - dist_B3[j3]) > max(dist_A3[i3],1 - dist_B3[j3 + 1]) and k3 in ('unb', 'sig'):
-                                                        kapa[k1 + '_' + k2 + '_' + k3][1].append((min(dist_A1[i1 + 1],1 - dist_B1[j1]) - max(dist_A1[i1], 1 - dist_B1[j1 + 1])) * (min(dist_A2[i2 + 1], dist_B2[j2 + 1]) - max(dist_A2[i2],dist_B2[j2])) * (min(dist_A3[i3 + 1],1 -dist_B3[j3]) - max(dist_A3[i3],1 - dist_B3[j3 + 1])))
-                                                        st_difference[k1 + '_' + k2 + '_' + k3][1].append((val_B1[j1] +val_B2[j2] +val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
-                                                    elif min(dist_A3[i3 + 1], dist_B3[j3 + 1]) > max(dist_A3[i3],dist_B3[j3]) and k3 in ('uni', 'pes'):
-                                                        kapa[k1 + '_' + k2 + '_' + k3][1].append((min(dist_A1[i1 + 1],1 - dist_B1[j1]) - max(dist_A1[i1], 1 - dist_B1[j1 + 1])) * (min(dist_A2[i2 + 1], dist_B2[j2 + 1]) - max(dist_A2[i2],dist_B2[j2])) * (min(dist_A3[i3 + 1],dist_B3[j3 + 1]) - max(dist_A3[i3],dist_B3[j3])))
-                                                        st_difference[k1 + '_' + k2 + '_' + k3][1].append((val_B1[j1] +val_B2[j2] +val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
-                    elif min(dist_A1[i1 + 1], dist_B1[j1 + 1]) > max(dist_A1[i1], dist_B1[j1]) and k1 in ('uni', 'pes'):
-                        kapa[k1][1].append(min(dist_A1[i1 + 1], dist_B1[j1 + 1]) - max(dist_A1[i1],dist_B1[j1]))
-                        st_difference[k1][1].append(val_B1[j1] -val_A1[i1])
-                        for k2 in ['unb', 'uni', 'pes', 'sig']:
-                            val_A2, dist_A2, val_B2, dist_B2 = val_dist[k2][0], val_dist[k2][1], val_dist[k2][2],val_dist[k2][3]
+                                                    if min(dist_A3[i3 + 1], 1 - dist_B3[j3]) > max(dist_A3[i3],1 - dist_B3[j3 + 1]) and biases[k] in ('unb', 'sig'):
+                                                        kapa[biases[i] + '_' + biases[j] + '_' + biases[k]][1].append((min(dist_A1[i1 + 1],1 - dist_B1[j1]) - max(dist_A1[i1], 1 - dist_B1[j1 + 1])) * (min(dist_A2[i2 + 1], dist_B2[j2 + 1]) - max(dist_A2[i2],dist_B2[j2])) * (min(dist_A3[i3 + 1],1 -dist_B3[j3]) - max(dist_A3[i3],1 - dist_B3[j3 + 1])))
+                                                        st_difference[biases[i] + '_' + biases[j] + '_' + biases[k]][1].append((val_B1[j1] +val_B2[j2] +val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
+                                                    elif min(dist_A3[i3 + 1], dist_B3[j3 + 1]) > max(dist_A3[i3],dist_B3[j3]) and biases[k] in ('uni', 'pes'):
+                                                        kapa[biases[i] + '_' + biases[j] + '_' + biases[k]][1].append((min(dist_A1[i1 + 1],1 - dist_B1[j1]) - max(dist_A1[i1], 1 - dist_B1[j1 + 1])) * (min(dist_A2[i2 + 1], dist_B2[j2 + 1]) - max(dist_A2[i2],dist_B2[j2])) * (min(dist_A3[i3 + 1],dist_B3[j3 + 1]) - max(dist_A3[i3],dist_B3[j3])))
+                                                        st_difference[biases[i] + '_' + biases[j] + '_' + biases[k]][1].append((val_B1[j1] +val_B2[j2] +val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
+                    elif min(dist_A1[i1 + 1], dist_B1[j1 + 1]) > max(dist_A1[i1], dist_B1[j1]) and biases[i] in ('uni', 'pes'):
+                        kapa[biases[i]][1].append(min(dist_A1[i1 + 1], dist_B1[j1 + 1]) - max(dist_A1[i1],dist_B1[j1]))
+                        st_difference[biases[i]][1].append(val_B1[j1] -val_A1[i1])
+                        for j in range(i,4):
+                            val_A2, dist_A2, val_B2, dist_B2 = val_dist[biases[j]][0], val_dist[biases[j]][1], val_dist[biases[j]][2],val_dist[biases[j]][3]
                             for i2 in range(val_A2.shape[0]):
                                 for j2 in range(val_B2.shape[0]):
-                                    if min(dist_A2[i2 + 1], 1 - dist_B2[j2]) > max(dist_A2[i2],1 - dist_B2[j2 + 1]) and k2 in ('unb', 'sig'):
-                                        kapa[k1 + '_' + k2][1].append((min(dist_A1[i1 + 1], dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (min(dist_A2[i2 + 1],1 - dist_B2[j2]) - max(dist_A2[i2], 1 - dist_B2[j2 + 1])))
-                                        st_difference[k1 + '_' + k2][1].append((val_B1[j1] + val_B2[j2]) / 2 - (val_A1[i1] + val_A2[i2]) / 2)
-                                        for k3 in ['unb', 'uni', 'pes', 'sig']:
-                                            val_A3, dist_A3, val_B3, dist_B3 = val_dist[k3][0], val_dist[k3][1],val_dist[k3][2], val_dist[k3][3]
+                                    if min(dist_A2[i2 + 1], 1 - dist_B2[j2]) > max(dist_A2[i2],1 - dist_B2[j2 + 1]) and biases[j] in ('unb', 'sig'):
+                                        kapa[biases[i] + '_' + biases[j]][1].append((min(dist_A1[i1 + 1], dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (min(dist_A2[i2 + 1],1 - dist_B2[j2]) - max(dist_A2[i2], 1 - dist_B2[j2 + 1])))
+                                        st_difference[biases[i] + '_' + biases[j]][1].append((val_B1[j1] + val_B2[j2]) / 2 - (val_A1[i1] + val_A2[i2]) / 2)
+                                        for k in range(j,4):
+                                            val_A3, dist_A3, val_B3, dist_B3 = val_dist[biases[k]][0], val_dist[biases[k]][1],val_dist[biases[k]][2], val_dist[biases[k]][3]
                                             for i3 in range(val_A3.shape[0]):
                                                 for j3 in range(val_B3.shape[0]):
-                                                    if min(dist_A3[i3 + 1], 1 - dist_B3[j3]) > max(dist_A3[i3],1 - dist_B3[j3 + 1]) and k3 in ('unb', 'sig'):
-                                                        kapa[k1 + '_' + k2 + '_' + k3][1].append((min(dist_A1[i1 + 1],dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (min(dist_A2[i2 + 1],1 - dist_B2[j2]) - max(dist_A2[i2], 1 - dist_B2[j2 + 1])) * (min(dist_A3[i3 + 1],1 - dist_B3[j3]) - max(dist_A3[i3], 1 - dist_B3[j3 + 1])))
-                                                        st_difference[k1 + '_' + k2 + '_' + k3][1].append((val_B1[j1] +val_B2[j2] +val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
-                                                    elif min(dist_A3[i3 + 1], dist_B3[j3 + 1]) > max(dist_A3[i3],dist_B3[j3]) and k3 in ('uni', 'pes'):
-                                                        kapa[k1 + '_' + k2 + '_' + k3][1].append((min(dist_A1[i1 + 1],dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (min(dist_A2[i2 + 1],1 - dist_B2[j2]) - max(dist_A2[i2], 1 - dist_B2[j2 + 1])) * (min(dist_A3[i3 + 1],dist_B3[j3 + 1]) - max(dist_A3[i3], dist_B3[j3])))
-                                                        st_difference[k1 + '_' + k2 + '_' + k3][1].append((val_B1[j1] +val_B2[j2] +val_B3[j3]) / 3 - (val_A1[ i1] + val_A2[i2] +val_A3[i3]) / 3)
-                                    elif min(dist_A2[i2 + 1], dist_B2[j2 + 1]) > max(dist_A2[i2], dist_B2[j2]) and k2 in ('uni', 'pes'):
-                                        kapa[k1 + '_' + k2][1].append((min(dist_A1[i1 + 1], dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (min(dist_A2[i2 + 1],dist_B2[j2 + 1]) - max(dist_A2[i2], dist_B2[j2])))
-                                        st_difference[k1 + '_' + k2][1].append((val_B1[j1] + val_B2[j2]) / 2 - (val_A1[i1] + val_A2[i2]) / 2)
-                                        for k3 in ['unb', 'uni', 'pes', 'sig']:
-                                            val_A3, dist_A3, val_B3, dist_B3 = val_dist[k3][0], val_dist[k3][1],val_dist[k3][2], val_dist[k3][3]
+                                                    if min(dist_A3[i3 + 1], 1 - dist_B3[j3]) > max(dist_A3[i3],1 - dist_B3[j3 + 1]) and biases[k] in ('unb', 'sig'):
+                                                        kapa[biases[i] + '_' + biases[j] + '_' + biases[k]][1].append((min(dist_A1[i1 + 1],dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (min(dist_A2[i2 + 1],1 - dist_B2[j2]) - max(dist_A2[i2], 1 - dist_B2[j2 + 1])) * (min(dist_A3[i3 + 1],1 - dist_B3[j3]) - max(dist_A3[i3], 1 - dist_B3[j3 + 1])))
+                                                        st_difference[biases[i] + '_' + biases[j] + '_' + biases[k]][1].append((val_B1[j1] +val_B2[j2] +val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
+                                                    elif min(dist_A3[i3 + 1], dist_B3[j3 + 1]) > max(dist_A3[i3],dist_B3[j3]) and biases[k] in ('uni', 'pes'):
+                                                        kapa[biases[i] + '_' + biases[j] + '_' + biases[k]][1].append((min(dist_A1[i1 + 1],dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (min(dist_A2[i2 + 1],1 - dist_B2[j2]) - max(dist_A2[i2], 1 - dist_B2[j2 + 1])) * (min(dist_A3[i3 + 1],dist_B3[j3 + 1]) - max(dist_A3[i3], dist_B3[j3])))
+                                                        st_difference[biases[i] + '_' + biases[j] + '_' + biases[k]][1].append((val_B1[j1] +val_B2[j2] +val_B3[j3]) / 3 - (val_A1[ i1] + val_A2[i2] +val_A3[i3]) / 3)
+                                    elif min(dist_A2[i2 + 1], dist_B2[j2 + 1]) > max(dist_A2[i2], dist_B2[j2]) and biases[j] in ('uni', 'pes'):
+                                        kapa[biases[i] + '_' + biases[j]][1].append((min(dist_A1[i1 + 1], dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (min(dist_A2[i2 + 1],dist_B2[j2 + 1]) - max(dist_A2[i2], dist_B2[j2])))
+                                        st_difference[biases[i] + '_' + biases[j]][1].append((val_B1[j1] + val_B2[j2]) / 2 - (val_A1[i1] + val_A2[i2]) / 2)
+                                        for k in range(j,4):
+                                            val_A3, dist_A3, val_B3, dist_B3 = val_dist[biases[k]][0], val_dist[biases[k]][1],val_dist[biases[k]][2], val_dist[biases[k]][3]
                                             for i3 in range(val_A3.shape[0]):
                                                 for j3 in range(val_B3.shape[0]):
-                                                    if min(dist_A3[i3 + 1], 1 - dist_B3[j3]) > max(dist_A3[i3],1 - dist_B3[j3 + 1]) and k3 in ('unb', 'sig'):
-                                                        kapa[k1 + '_' + k2 + '_' + k3][1].append((min(dist_A1[i1 + 1],dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (min(dist_A2[i2 + 1],dist_B2[j2 + 1]) - max(dist_A2[i2], dist_B2[j2])) * (min(dist_A3[i3 + 1],1 - dist_B3[j3]) - max(dist_A3[i3], 1 - dist_B3[j3 + 1])))
-                                                        st_difference[k1 + '_' + k2 + '_' + k3][1].append((val_B1[j1] +val_B2[j2] +val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] + val_A3[ i3]) / 3)
-                                                    elif min(dist_A3[i3 + 1], dist_B3[j3 + 1]) > max(dist_A3[i3],dist_B3[j3]) and k3 in ('uni', 'pes'):
-                                                        kapa[k1 + '_' + k2 + '_' + k3][1].append((min(dist_A1[i1 + 1],dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (min(dist_A2[i2 + 1],dist_B2[j2 + 1]) - max(dist_A2[i2], dist_B2[j2])) * (min(dist_A3[i3 + 1],dist_B3[j3 + 1]) - max(dist_A3[i3], dist_B3[j3])))
-                                                        st_difference[k1 + '_' + k2 + '_' + k3][1].append((val_B1[j1] + val_B2[j2] +val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
+                                                    if min(dist_A3[i3 + 1], 1 - dist_B3[j3]) > max(dist_A3[i3],1 - dist_B3[j3 + 1]) and biases[k] in ('unb', 'sig'):
+                                                        kapa[biases[i] + '_' + biases[j] + '_' + biases[k]][1].append((min(dist_A1[i1 + 1],dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (min(dist_A2[i2 + 1],dist_B2[j2 + 1]) - max(dist_A2[i2], dist_B2[j2])) * (min(dist_A3[i3 + 1],1 - dist_B3[j3]) - max(dist_A3[i3], 1 - dist_B3[j3 + 1])))
+                                                        st_difference[biases[i] + '_' + biases[j] + '_' + biases[k]][1].append((val_B1[j1] +val_B2[j2] +val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] + val_A3[ i3]) / 3)
+                                                    elif min(dist_A3[i3 + 1], dist_B3[j3 + 1]) > max(dist_A3[i3],dist_B3[j3]) and biases[k] in ('uni', 'pes'):
+                                                        kapa[biases[i] + '_' + biases[j] + '_' + biases[k]][1].append((min(dist_A1[i1 + 1],dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (min(dist_A2[i2 + 1],dist_B2[j2 + 1]) - max(dist_A2[i2], dist_B2[j2])) * (min(dist_A3[i3 + 1],dist_B3[j3 + 1]) - max(dist_A3[i3], dist_B3[j3])))
+                                                        st_difference[biases[i] + '_' + biases[j] + '_' + biases[k]][1].append((val_B1[j1] + val_B2[j2] +val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
                 elif Corr == 0:
-                    if k1 in ('unb', 'sig'):
-                        kapa[k1][1].append((dist_A1[i1 + 1] - dist_A1[i1]) * (dist_B1[j1 + 1] - dist_B1[j1]))
-                        st_difference[k1][1].append(val_B1[j1] -val_A1[i1])
-                        for k2 in ['unb', 'uni', 'pes', 'sig']:
-                            val_A2, dist_A2, val_B2, dist_B2 = val_dist[k2][0], val_dist[k2][1], val_dist[k2][2],val_dist[k2][3]
+                    if biases[i] in ('unb', 'sig'):
+                        kapa[biases[i]][1].append((dist_A1[i1 + 1] - dist_A1[i1]) * (dist_B1[j1 + 1] - dist_B1[j1]))
+                        st_difference[biases[i]][1].append(val_B1[j1] -val_A1[i1])
+                        for j in range(i,4):
+                            val_A2, dist_A2, val_B2, dist_B2 = val_dist[biases[j]][0], val_dist[biases[j]][1], val_dist[biases[j]][2],val_dist[biases[j]][3]
                             for i2 in range(val_A2.shape[0]):
                                 for j2 in range(val_B2.shape[0]):
-                                    if k2 in ('unb', 'sig'):
-                                        kapa[k1 + '_' + k2][1].append((dist_A1[i1 + 1] - dist_A1[i1]) * (dist_B1[j1 + 1] - dist_B1[j1]) * (dist_A2[i2 + 1] - dist_A2[i2]) * (dist_B2[j2 + 1] - dist_B2[j2]))
-                                        st_difference[k1 + '_' + k2][1].append((val_B1[j1] + val_B2[j2]) / 2 - (val_A1[i1] + val_A2[i2]) / 2)
-                                        for k3 in ['unb', 'uni', 'pes', 'sig']:
-                                            val_A3, dist_A3, val_B3, dist_B3 = val_dist[k3][0], val_dist[k3][1],val_dist[k3][2], val_dist[k3][3]
+                                    if biases[j] in ('unb', 'sig'):
+                                        kapa[biases[i] + '_' + biases[j]][1].append((dist_A1[i1 + 1] - dist_A1[i1]) * (dist_B1[j1 + 1] - dist_B1[j1]) * (dist_A2[i2 + 1] - dist_A2[i2]) * (dist_B2[j2 + 1] - dist_B2[j2]))
+                                        st_difference[biases[i] + '_' + biases[j]][1].append((val_B1[j1] + val_B2[j2]) / 2 - (val_A1[i1] + val_A2[i2]) / 2)
+                                        for k in range(j,4):
+                                            val_A3, dist_A3, val_B3, dist_B3 = val_dist[biases[k]][0], val_dist[biases[k]][1],val_dist[biases[k]][2], val_dist[biases[k]][3]
                                             for i3 in range(val_A3.shape[0]):
                                                 for j3 in range(val_B3.shape[0]):
-                                                    if k3 in ('unb', 'sig'):
-                                                        kapa[k1 + '_' + k2 + '_' + k3][1].append((dist_A1[i1 + 1] - dist_A1[i1]) * (dist_B1[j1 + 1] -dist_B1[j1]) * (dist_A2[i2 + 1] -dist_A2[i2]) * (dist_B2[j2 + 1] - dist_B2[j2]) * (dist_A3[i3 + 1] - dist_A3[i3]) * (dist_B3[j3 + 1] -dist_B3[j3]))
-                                                        st_difference[k1 + '_' + k2 + '_' + k3][1].append((val_B1[j1] + val_B2[j2] + val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
-                                                    elif min(dist_A3[i3 + 1], dist_B3[j3 + 1]) > max(dist_A3[i3],dist_B3[j3]) and k3 in ('uni', 'pes'):
-                                                        kapa[k1 + '_' + k2 + '_' + k3][1].append((dist_A1[i1 + 1] - dist_A1[i1]) * (dist_B1[j1 + 1] -dist_B1[j1]) * (dist_A2[i2 + 1] -dist_A2[i2]) * (dist_B2[j2 + 1] -dist_B2[j2]) * (min(dist_A3[i3 + 1],dist_B3[j3 + 1]) - max(dist_A3[i3],dist_B3[j3])))
-                                                        st_difference[k1 + '_' + k2 + '_' + k3][1].append((val_B1[j1] + val_B2[j2] + val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
-                                    elif min(dist_A2[i2 + 1], dist_B2[j2 + 1]) > max(dist_A2[i2], dist_B2[j2]) and k2 in ('uni', 'pes'):
-                                        kapa[k1 + '_' + k2][1].append((dist_A1[i1 + 1] - dist_A1[i1]) * (dist_B1[j1 + 1] - dist_B1[j1]) * (min(dist_A2[i2 + 1],dist_B2[j2 + 1]) - max(dist_A2[i2], dist_B2[j2])))
-                                        st_difference[k1 + '_' + k2][1].append((val_B1[j1] +val_B2[j2]) / 2 - (val_A1[i1] +val_A2[i2]) / 2)
-                                        for k3 in ['unb', 'uni', 'pes', 'sig']:
-                                            val_A3, dist_A3, val_B3, dist_B3 = val_dist[k3][0], val_dist[k3][1],val_dist[k3][2], val_dist[k3][3]
+                                                    if biases[k] in ('unb', 'sig'):
+                                                        kapa[biases[i] + '_' + biases[j] + '_' + biases[k]][1].append((dist_A1[i1 + 1] - dist_A1[i1]) * (dist_B1[j1 + 1] -dist_B1[j1]) * (dist_A2[i2 + 1] -dist_A2[i2]) * (dist_B2[j2 + 1] - dist_B2[j2]) * (dist_A3[i3 + 1] - dist_A3[i3]) * (dist_B3[j3 + 1] -dist_B3[j3]))
+                                                        st_difference[biases[i] + '_' + biases[j] + '_' + biases[k]][1].append((val_B1[j1] + val_B2[j2] + val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
+                                                    elif min(dist_A3[i3 + 1], dist_B3[j3 + 1]) > max(dist_A3[i3],dist_B3[j3]) and biases[k] in ('uni', 'pes'):
+                                                        kapa[biases[i] + '_' + biases[j] + '_' + biases[k]][1].append((dist_A1[i1 + 1] - dist_A1[i1]) * (dist_B1[j1 + 1] -dist_B1[j1]) * (dist_A2[i2 + 1] -dist_A2[i2]) * (dist_B2[j2 + 1] -dist_B2[j2]) * (min(dist_A3[i3 + 1],dist_B3[j3 + 1]) - max(dist_A3[i3],dist_B3[j3])))
+                                                        st_difference[biases[i] + '_' + biases[j] + '_' + biases[k]][1].append((val_B1[j1] + val_B2[j2] + val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
+                                    elif min(dist_A2[i2 + 1], dist_B2[j2 + 1]) > max(dist_A2[i2], dist_B2[j2]) and biases[j] in ('uni', 'pes'):
+                                        kapa[biases[i] + '_' + biases[j]][1].append((dist_A1[i1 + 1] - dist_A1[i1]) * (dist_B1[j1 + 1] - dist_B1[j1]) * (min(dist_A2[i2 + 1],dist_B2[j2 + 1]) - max(dist_A2[i2], dist_B2[j2])))
+                                        st_difference[biases[i] + '_' + biases[j]][1].append((val_B1[j1] +val_B2[j2]) / 2 - (val_A1[i1] +val_A2[i2]) / 2)
+                                        for k in range(j,4):
+                                            val_A3, dist_A3, val_B3, dist_B3 = val_dist[biases[k]][0], val_dist[biases[k]][1],val_dist[biases[k]][2], val_dist[biases[k]][3]
                                             for i3 in range(val_A3.shape[0]):
                                                 for j3 in range(val_B3.shape[0]):
-                                                    if k3 in ('unb', 'sig'):
-                                                        kapa[k1 + '_' + k2 + '_' + k3][1].append((dist_A1[i1 + 1] - dist_A1[i1]) * (dist_B1[j1 + 1] -dist_B1[j1]) * (min(dist_A2[i2 + 1],dist_B2[j2 + 1]) - max(dist_A2[i2],dist_B2[j2])) * (dist_A3[i3 + 1] -dist_A3[i3]) * (dist_B3[j3 + 1] -dist_B3[j3]))
-                                                        st_difference[k1 + '_' + k2 + '_' + k3][1].append((val_B1[j1] + val_B2[j2] + val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
-                                                    elif min(dist_A3[i3 + 1], dist_B3[j3 + 1]) > max(dist_A3[i3],dist_B3[j3]) and k3 in ('uni', 'pes'):
-                                                        kapa[k1 + '_' + k2 + '_' + k3][1].append((dist_A1[i1 + 1] - dist_A1[i1]) * (dist_B1[j1 + 1] -dist_B1[j1]) * (min(dist_A2[i2 + 1],dist_B2[j2 + 1]) - max(dist_A2[i2], dist_B2[j2])) * (min(dist_A3[i3 + 1], dist_B3[j3 + 1]) - max(dist_A3[i3],dist_B3[j3])))
-                                                        st_difference[k1 + '_' + k2 + '_' + k3][1].append((val_B1[j1] + val_B2[j2] + val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
-                    elif min(dist_A1[i1 + 1], dist_B1[j1 + 1]) > max(dist_A1[i1], dist_B1[j1]) and k1 in ('uni', 'pes'):
-                        kapa[k1][1].append(min(dist_A1[i1 + 1], dist_B1[j1 + 1]) - max(dist_A1[i1],dist_B1[j1]))
-                        st_difference[k1][1].append(val_B1[j1] -val_A1[i1])
-                        for k2 in ['unb', 'uni', 'pes', 'sig']:
-                            val_A2, dist_A2, val_B2, dist_B2 = val_dist[k2][0], val_dist[k2][1], val_dist[k2][2],val_dist[k2][3]
+                                                    if biases[k] in ('unb', 'sig'):
+                                                        kapa[biases[i] + '_' + biases[j] + '_' + biases[k]][1].append((dist_A1[i1 + 1] - dist_A1[i1]) * (dist_B1[j1 + 1] -dist_B1[j1]) * (min(dist_A2[i2 + 1],dist_B2[j2 + 1]) - max(dist_A2[i2],dist_B2[j2])) * (dist_A3[i3 + 1] -dist_A3[i3]) * (dist_B3[j3 + 1] -dist_B3[j3]))
+                                                        st_difference[biases[i] + '_' + biases[j] + '_' + biases[k]][1].append((val_B1[j1] + val_B2[j2] + val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
+                                                    elif min(dist_A3[i3 + 1], dist_B3[j3 + 1]) > max(dist_A3[i3],dist_B3[j3]) and biases[k] in ('uni', 'pes'):
+                                                        kapa[biases[i] + '_' + biases[j] + '_' + biases[k]][1].append((dist_A1[i1 + 1] - dist_A1[i1]) * (dist_B1[j1 + 1] -dist_B1[j1]) * (min(dist_A2[i2 + 1],dist_B2[j2 + 1]) - max(dist_A2[i2], dist_B2[j2])) * (min(dist_A3[i3 + 1], dist_B3[j3 + 1]) - max(dist_A3[i3],dist_B3[j3])))
+                                                        st_difference[biases[i] + '_' + biases[j] + '_' + biases[k]][1].append((val_B1[j1] + val_B2[j2] + val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
+                    elif min(dist_A1[i1 + 1], dist_B1[j1 + 1]) > max(dist_A1[i1], dist_B1[j1]) and biases[i] in ('uni', 'pes'):
+                        kapa[biases[i]][1].append(min(dist_A1[i1 + 1], dist_B1[j1 + 1]) - max(dist_A1[i1],dist_B1[j1]))
+                        st_difference[biases[i]][1].append(val_B1[j1] -val_A1[i1])
+                        for j in range(i,4):
+                            val_A2, dist_A2, val_B2, dist_B2 = val_dist[biases[j]][0], val_dist[biases[j]][1], val_dist[biases[j]][2],val_dist[biases[j]][3]
                             for i2 in range(val_A2.shape[0]):
                                 for j2 in range(val_B2.shape[0]):
-                                    if k2 in ('unb', 'sig'):
-                                        kapa[k1 + '_' + k2][1].append((min(dist_A1[i1 + 1], dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (dist_A2[i2 + 1] - dist_A2[i2]) * (dist_B2[j2 + 1] - dist_B2[j2]))
-                                        st_difference[k1 + '_' + k2][1].append((val_B1[j1] +val_B2[j2]) / 2 - (val_A1[i1] +val_A2[i2]) / 2)
-                                        for k3 in ['unb', 'uni', 'pes', 'sig']:
-                                            val_A3, dist_A3, val_B3, dist_B3 = val_dist[k3][0], val_dist[k3][1],val_dist[k3][2], val_dist[k3][3]
+                                    if biases[j] in ('unb', 'sig'):
+                                        kapa[biases[i] + '_' + biases[j]][1].append((min(dist_A1[i1 + 1], dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (dist_A2[i2 + 1] - dist_A2[i2]) * (dist_B2[j2 + 1] - dist_B2[j2]))
+                                        st_difference[biases[i] + '_' + biases[j]][1].append((val_B1[j1] +val_B2[j2]) / 2 - (val_A1[i1] +val_A2[i2]) / 2)
+                                        for k in range(j,4):
+                                            val_A3, dist_A3, val_B3, dist_B3 = val_dist[biases[k]][0], val_dist[biases[k]][1],val_dist[biases[k]][2], val_dist[biases[k]][3]
                                             for i3 in range(val_A3.shape[0]):
                                                 for j3 in range(val_B3.shape[0]):
-                                                    if k3 in ('unb', 'sig'):
-                                                        kapa[k1 + '_' + k2 + '_' + k3][1].append((min(dist_A1[i1 + 1],dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (dist_A2[i2 + 1] - dist_A2[i2]) * (dist_B2[j2 + 1] - dist_B2[j2]) * (dist_A3[i3 + 1] -dist_A3[i3]) * (dist_B3[j3 + 1] -dist_B3[j3]))
-                                                        st_difference[k1 + '_' + k2 + '_' + k3][1].append((val_B1[j1] + val_B2[j2] + val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
-                                                    elif min(dist_A3[i3 + 1], dist_B3[j3 + 1]) > max(dist_A3[i3],dist_B3[j3]) and k3 in ('uni', 'pes'):
-                                                        kapa[k1 + '_' + k2 + '_' + k3][1].append((min(dist_A1[i1 + 1],dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (dist_A2[i2 + 1] - dist_A2[i2]) * (dist_B2[j2 + 1] - dist_B2[j2]) * (min(dist_A3[i3 + 1], dist_B3[j3 + 1]) - max(dist_A3[i3],dist_B3[j3])))
-                                                        st_difference[k1 + '_' + k2 + '_' + k3][1].append((val_B1[j1] + val_B2[j2] + val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
-                                    elif min(dist_A2[i2 + 1], dist_B2[j2 + 1]) > max(dist_A2[i2], dist_B2[j2]) and k2 in ('uni', 'pes'):
-                                        kapa[k1 + '_' + k2][1].append((min(dist_A1[i1 + 1], dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (min(dist_A2[i2 + 1], dist_B2[j2 + 1]) - max(dist_A2[i2], dist_B2[j2])))
-                                        st_difference[k1 + '_' + k2][1].append((val_B1[j1] +val_B2[j2]) / 2 - (val_A1[i1] +val_A2[i2]) / 2)
-                                        for k3 in ['unb', 'uni', 'pes', 'sig']:
-                                            val_A3, dist_A3, val_B3, dist_B3 = val_dist[k3][0], val_dist[k3][1],val_dist[k3][2], val_dist[k3][3]
+                                                    if biases[k] in ('unb', 'sig'):
+                                                        kapa[biases[i] + '_' + biases[j] + '_' + biases[k]][1].append((min(dist_A1[i1 + 1],dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (dist_A2[i2 + 1] - dist_A2[i2]) * (dist_B2[j2 + 1] - dist_B2[j2]) * (dist_A3[i3 + 1] -dist_A3[i3]) * (dist_B3[j3 + 1] -dist_B3[j3]))
+                                                        st_difference[biases[i] + '_' + biases[j] + '_' + biases[k]][1].append((val_B1[j1] + val_B2[j2] + val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
+                                                    elif min(dist_A3[i3 + 1], dist_B3[j3 + 1]) > max(dist_A3[i3],dist_B3[j3]) and biases[k] in ('uni', 'pes'):
+                                                        kapa[biases[i] + '_' + biases[j] + '_' + biases[k]][1].append((min(dist_A1[i1 + 1],dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (dist_A2[i2 + 1] - dist_A2[i2]) * (dist_B2[j2 + 1] - dist_B2[j2]) * (min(dist_A3[i3 + 1], dist_B3[j3 + 1]) - max(dist_A3[i3],dist_B3[j3])))
+                                                        st_difference[biases[i] + '_' + biases[j] + '_' + biases[k]][1].append((val_B1[j1] + val_B2[j2] + val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
+                                    elif min(dist_A2[i2 + 1], dist_B2[j2 + 1]) > max(dist_A2[i2], dist_B2[j2]) and biases[j] in ('uni', 'pes'):
+                                        kapa[biases[i] + '_' + biases[j]][1].append((min(dist_A1[i1 + 1], dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (min(dist_A2[i2 + 1], dist_B2[j2 + 1]) - max(dist_A2[i2], dist_B2[j2])))
+                                        st_difference[biases[i] + '_' + biases[j]][1].append((val_B1[j1] +val_B2[j2]) / 2 - (val_A1[i1] +val_A2[i2]) / 2)
+                                        for k in range(j,4):
+                                            val_A3, dist_A3, val_B3, dist_B3 = val_dist[biases[k]][0], val_dist[biases[k]][1],val_dist[biases[k]][2], val_dist[biases[k]][3]
                                             for i3 in range(val_A3.shape[0]):
                                                 for j3 in range(val_B3.shape[0]):
-                                                    if k3 in ('unb', 'sig'):
-                                                        kapa[k1 + '_' + k2 + '_' + k3][1].append((min(dist_A1[i1 + 1],dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (min(dist_A2[i2 + 1],dist_B2[j2 + 1]) - max(dist_A2[i2], dist_B2[j2])) * (dist_A3[i3 + 1] - dist_A3[i3]) * (dist_B3[j3 + 1] - dist_B3[j3]))
-                                                        st_difference[k1 + '_' + k2 + '_' + k3][1].append((val_B1[j1] +val_B2[j2] +val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
-                                                    elif min(dist_A3[i3 + 1], dist_B3[j3 + 1]) > max(dist_A3[i3],dist_B3[j3]) and k3 in ('uni', 'pes'):
-                                                        kapa[k1 + '_' + k2 + '_' + k3][1].append((min(dist_A1[i1 + 1],dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (min(dist_A2[i2 + 1],dist_B2[j2 + 1]) - max(dist_A2[i2], dist_B2[j2])) * (min(dist_A3[i3 + 1],dist_B3[j3 + 1]) - max(dist_A3[i3], dist_B3[j3])))
-                                                        st_difference[k1 + '_' + k2 + '_' + k3][1].append((val_B1[j1] + val_B2[j2] + val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
-
+                                                    if biases[k] in ('unb', 'sig'):
+                                                        kapa[biases[i] + '_' + biases[j] + '_' + biases[k]][1].append((min(dist_A1[i1 + 1],dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (min(dist_A2[i2 + 1],dist_B2[j2 + 1]) - max(dist_A2[i2], dist_B2[j2])) * (dist_A3[i3 + 1] - dist_A3[i3]) * (dist_B3[j3 + 1] - dist_B3[j3]))
+                                                        st_difference[biases[i] + '_' + biases[j] + '_' + biases[k]][1].append((val_B1[j1] +val_B2[j2] +val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
+                                                    elif min(dist_A3[i3 + 1], dist_B3[j3 + 1]) > max(dist_A3[i3],dist_B3[j3]) and biases[k] in ('uni', 'pes'):
+                                                        kapa[biases[i] + '_' + biases[j] + '_' + biases[k]][1].append((min(dist_A1[i1 + 1],dist_B1[j1 + 1]) - max(dist_A1[i1], dist_B1[j1])) * (min(dist_A2[i2 + 1],dist_B2[j2 + 1]) - max(dist_A2[i2], dist_B2[j2])) * (min(dist_A3[i3 + 1],dist_B3[j3 + 1]) - max(dist_A3[i3], dist_B3[j3])))
+                                                        st_difference[biases[i] + '_' + biases[j] + '_' + biases[k]][1].append((val_B1[j1] + val_B2[j2] + val_B3[j3]) / 3 - (val_A1[i1] +val_A2[i2] +val_A3[i3]) / 3)
     for k1 in ['unb', 'uni', 'pes', 'sig']:
         probs0[k1].append(np.array(kapa[k1][0]) / 3)
         differences0[k1].append(np.array(st_difference[k1][0]))
         for k2 in ['unb', 'uni', 'pes', 'sig']:
             probs0[k1 + '_' + k2].append(np.array(kapa[k1 + '_' + k2][0]) / 3)
             differences0[k1 + '_' + k2].append(np.array(st_difference[k1 + '_' + k2][0]))
+            probs0[k2 + '_' + k1].append(np.array(kapa[k1 + '_' + k2][0]) / 3)
+            differences0[k2 + '_' + k1].append(np.array(st_difference[k1 + '_' + k2][0]))
             for k3 in ['unb', 'uni', 'pes', 'sig']:
                 probs0[k1 + '_' + k2 + '_' + k3].append(np.array(kapa[k1 + '_' + k2 + '_' + k3][0]) / 3)
                 differences0[k1 + '_' + k2 + '_' + k3].append(np.array(st_difference[k1 + '_' + k2 + '_' + k3][0]))
+                probs0[k1 + '_' + k3 + '_' + k2].append(np.array(kapa[k1 + '_' + k2 + '_' + k3][0]) / 3)
+                differences0[k1 + '_' + k3 + '_' + k2].append(np.array(st_difference[k1 + '_' + k2 + '_' + k3][0]))
+                probs0[k2 + '_' + k1 + '_' + k3].append(np.array(kapa[k1 + '_' + k2 + '_' + k3][0]) / 3)
+                differences0[k2 + '_' + k1 + '_' + k3].append(np.array(st_difference[k1 + '_' + k2 + '_' + k3][0]))
+                probs0[k2 + '_' + k3 + '_' + k1].append(np.array(kapa[k1 + '_' + k2 + '_' + k3][0]) / 3)
+                differences0[k2 + '_' + k3 + '_' + k1].append(np.array(st_difference[k1 + '_' + k2 + '_' + k3][0]))
+                probs0[k3 + '_' + k1 + '_' + k2].append(np.array(kapa[k1 + '_' + k2 + '_' + k3][0]) / 3)
+                differences0[k3 + '_' + k1 + '_' + k2].append(np.array(st_difference[k1 + '_' + k2 + '_' + k3][0]))
+                probs0[k3 + '_' + k2 + '_' + k1].append(np.array(kapa[k1 + '_' + k2 + '_' + k3][0]) / 3)
+                differences0[k3 + '_' + k2 + '_' + k1].append(np.array(st_difference[k1 + '_' + k2 + '_' + k3][0]))
     if Corr == 1:
         for k1 in ['unb', 'uni', 'pes', 'sig']:
             probs[k1].append(np.array(kapa[k1][0]) / 3)
@@ -952,9 +984,27 @@ def sigmoid_weights(val_dist, Corr, probs, differences, probs0, differences0):
             for k2 in ['unb', 'uni', 'pes', 'sig']:
                 probs[k1 + '_' + k2].append(np.array(kapa[k1 + '_' + k2][0]) / 3)
                 differences[k1 + '_' + k2].append(np.array(st_difference[k1 + '_' + k2][0]))
+                probs[k2 + '_' + k1].append(np.array(kapa[k1 + '_' + k2][0]) / 3)
+                differences[k2 + '_' + k1].append(np.array(st_difference[k1 + '_' + k2][0]))
                 for k3 in ['unb', 'uni', 'pes', 'sig']:
                     probs[k1 + '_' + k2 + '_' + k3].append(np.array(kapa[k1 + '_' + k2 + '_' + k3][0]) / 3)
-                    differences[k1 + '_' + k2 + '_' + k3].append(np.array(st_difference[k1 + '_' + k2 + '_' + k3][0]))
+                    differences[k1 + '_' + k2 + '_' + k3].append(np.array(
+                        st_difference[k1 + '_' + k2 + '_' + k3][0]))
+                    probs[k1 + '_' + k3 + '_' + k2].append(np.array(kapa[k1 + '_' + k2 + '_' + k3][0]) / 3)
+                    differences[k1 + '_' + k3 + '_' + k2].append(np.array(
+                        st_difference[k1 + '_' + k2 + '_' + k3][0]))
+                    probs[k2 + '_' + k1 + '_' + k3].append(np.array(kapa[k1 + '_' + k2 + '_' + k3][0]) / 3)
+                    differences[k2 + '_' + k1 + '_' + k3].append(np.array(
+                        st_difference[k1 + '_' + k2 + '_' + k3][0]))
+                    probs[k2 + '_' + k3 + '_' + k1].append(np.array(kapa[k1 + '_' + k2 + '_' + k3][0]) / 3)
+                    differences[k2 + '_' + k3 + '_' + k1].append(np.array(
+                        st_difference[k1 + '_' + k2 + '_' + k3][0]))
+                    probs[k3 + '_' + k1 + '_' + k2].append(np.array(kapa[k1 + '_' + k2 + '_' + k3][0]) / 3)
+                    differences[k3 + '_' + k1 + '_' + k2].append(np.array(
+                        st_difference[k1 + '_' + k2 + '_' + k3][0]))
+                    probs[k3 + '_' + k2 + '_' + k1].append(np.array(kapa[k1 + '_' + k2 + '_' + k3][0]) / 3)
+                    differences[k3 + '_' + k2 + '_' + k1].append(np.array(
+                        st_difference[k1 + '_' + k2 + '_' + k3][0]))
     else:
         for k1 in ['unb', 'uni', 'pes', 'sig']:
             probs[k1].append(np.array(kapa[k1][1]) / 3)
@@ -962,23 +1012,43 @@ def sigmoid_weights(val_dist, Corr, probs, differences, probs0, differences0):
             for k2 in ['unb', 'uni', 'pes', 'sig']:
                 probs[k1 + '_' + k2].append(np.array(kapa[k1 + '_' + k2][1]) / 3)
                 differences[k1 + '_' + k2].append(np.array(st_difference[k1 + '_' + k2][1]))
+                probs[k2 + '_' + k1].append(np.array(kapa[k1 + '_' + k2][1]) / 3)
+                differences[k2 + '_' + k1].append(np.array(st_difference[k1 + '_' + k2][1]))
                 for k3 in ['unb', 'uni', 'pes', 'sig']:
                     probs[k1 + '_' + k2 + '_' + k3].append(np.array(kapa[k1 + '_' + k2 + '_' + k3][1]) / 3)
-                    differences[k1 + '_' + k2 + '_' + k3].append(np.array(st_difference[k1 + '_' + k2 + '_' + k3][1]))
+                    differences[k1 + '_' + k2 + '_' + k3].append(np.array(
+                        st_difference[k1 + '_' + k2 + '_' + k3][1]))
+                    probs[k1 + '_' + k3 + '_' + k2].append(np.array(kapa[k1 + '_' + k2 + '_' + k3][1]) / 3)
+                    differences[k1 + '_' + k3 + '_' + k2].append(np.array(
+                        st_difference[k1 + '_' + k2 + '_' + k3][1]))
+                    probs[k2 + '_' + k1 + '_' + k3].append(np.array(kapa[k1 + '_' + k2 + '_' + k3][1]) / 3)
+                    differences[k2 + '_' + k1 + '_' + k3].append(np.array(
+                        st_difference[k1 + '_' + k2 + '_' + k3][1]))
+                    probs[k2 + '_' + k3 + '_' + k1].append(np.array(kapa[k1 + '_' + k2 + '_' + k3][1]) / 3)
+                    differences[k2 + '_' + k3 + '_' + k1].append(np.array(
+                        st_difference[k1 + '_' + k2 + '_' + k3][1]))
+                    probs[k3 + '_' + k1 + '_' + k2].append(np.array(kapa[k1 + '_' + k2 + '_' + k3][1]) / 3)
+                    differences[k3 + '_' + k1 + '_' + k2].append(np.array(
+                        st_difference[k1 + '_' + k2 + '_' + k3][1]))
+                    probs[k3 + '_' + k2 + '_' + k1].append(np.array(kapa[k1 + '_' + k2 + '_' + k3][1]) / 3)
+                    differences[k3 + '_' + k2 + '_' + k1].append(np.array(
+                        st_difference[k1 + '_' + k2 + '_' + k3][1]))
     return probs, differences, probs0, differences0
 
 
 def add_bias_weights(Data, name, B=None, sigmoid=True):
+    biases = ['unb', 'uni', 'pes', 'sig']
+    print(datetime.datetime.now())
     BEVas, BEVbs = [], []
     probs, differences, probs0, differences0 = {}, {}, {}, {}
-    for k1 in ['unb', 'uni', 'pes', 'sig']:
-        probs[k1], differences[k1], probs0[k1], differences0[k1] = [], [], [], []
-        for k2 in ['unb', 'uni', 'pes', 'sig']:
-            probs[k1 + '_' + k2], differences[k1 + '_' + k2], probs0[k1 + '_' + k2], differences0[
-                k1 + '_' + k2] = [], [], [], []
-            for k3 in ['unb', 'uni', 'pes', 'sig']:
-                probs[k1 + '_' + k2 + '_' + k3], differences[k1 + '_' + k2 + '_' + k3], probs0[
-                    k1 + '_' + k2 + '_' + k3], differences0[k1 + '_' + k2 + '_' + k3] = [], [], [], []
+    for i in range(0,4):
+        probs[biases[i]], differences[biases[i]], probs0[biases[i]], differences0[biases[i]] = [], [], [], []
+        for j in range(i,4):
+            probs[biases[i] + '_' + biases[j]], differences[biases[i] + '_' + biases[j]], probs0[biases[i] + '_' + biases[j]], differences0[
+                biases[i] + '_' + biases[j]] = [], [], [], []
+            for k in range(j,4):
+                probs[biases[i] + '_' + biases[j] + '_' + biases[k]], differences[biases[i] + '_' + biases[j] + '_' + biases[k]], probs0[
+                    biases[i] + '_' + biases[j] + '_' + biases[k]], differences0[biases[i] + '_' + biases[j] + '_' + biases[k]] = [], [], [], []
     nProblems = Data.shape[0]
     Data.index = range(nProblems)
     for prob in range(nProblems):
@@ -1040,7 +1110,7 @@ def add_bias_weights(Data, name, B=None, sigmoid=True):
                 tmp.index=range(len(tmp))
                 tmp['BEVa'] = BEVas
                 tmp['BEVb'] = BEVbs
-                tmp = tmp[['Problem','BEVa','BEVb','pBias0','pBias1','pBias2','pBias3','pBias4']]
+                tmp = tmp[['Problem','BEVa','BEVb']]
                 for key in probs.keys():
                     tmp['Weight_' + key] = probs[key]
                 for key in differences.keys():
@@ -1052,20 +1122,21 @@ def add_bias_weights(Data, name, B=None, sigmoid=True):
                 tmp.to_pickle(name+'_'+str(prob)+'.pkl')
                 BEVas, BEVbs = [], []
                 probs, differences, probs0, differences0 = {}, {}, {}, {}
-                for k1 in ['unb', 'uni', 'pes', 'sig']:
-                    probs[k1], differences[k1], probs0[k1], differences0[k1] = [], [], [], []
-                    for k2 in ['unb', 'uni', 'pes', 'sig']:
-                        probs[k1 + '_' + k2], differences[k1 + '_' + k2], probs0[k1 + '_' + k2], differences0[
-                            k1 + '_' + k2] = [], [], [], []
-                        for k3 in ['unb', 'uni', 'pes', 'sig']:
-                            probs[k1 + '_' + k2 + '_' + k3], differences[k1 + '_' + k2 + '_' + k3], probs0[
-                                k1 + '_' + k2 + '_' + k3], differences0[k1 + '_' + k2 + '_' + k3] = [], [], [], []
+                for i in range(0,4):
+                    probs[biases[i]], differences[biases[i]], probs0[biases[i]], differences0[biases[i]] = [], [], [], []
+                    for j in range(i,4):
+                        probs[biases[i] + '_' + biases[j]], differences[biases[i] + '_' + biases[j]], probs0[biases[i] + '_' + biases[j]], differences0[
+                            biases[i] + '_' + biases[j]] = [], [], [], []
+                        for k in range(j,4):
+                            probs[biases[i] + '_' + biases[j] + '_' + biases[k]], differences[biases[i] + '_' + biases[j] + '_' + biases[k]], probs0[
+                                biases[i] + '_' + biases[j] + '_' + biases[k]], differences0[biases[i] + '_' + biases[j] + '_' + biases[k]] = [], [], [], []
     if not sigmoid:
         for key in probs.keys():
             Data['Weight_' + key] = probs[key]
         for key in probs0.keys():
             Data['Weight0_' + key] = probs0[key]
         Data.to_csv(name+'.csv', index=False)
+    print(datetime.datetime.now())
 
 
 def MSE_biases(x,df, label):
@@ -1524,4 +1595,3 @@ def find_best_probs(train, label, c13k=True):
 
 
 if __name__ == '__main__':
-    add_bias_weights(pd.read_csv('c13k_selections.csv'), 'c13k_selections_ST')

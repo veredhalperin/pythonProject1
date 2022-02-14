@@ -18,7 +18,7 @@ if __name__ == '__main__':
     ### Section B: Please do not change this section ###
     ####################################################
     # load problems to predict (in this example, the estimation set problems)
-    Data = pd.read_csv('c13k_selections.csv')
+    Data = pd.read_csv('c13k_selections-1.csv')
     # useful variables
     nProblems = Data.shape[0]
     PredictedAll = np.zeros(shape=(nProblems, 5))
